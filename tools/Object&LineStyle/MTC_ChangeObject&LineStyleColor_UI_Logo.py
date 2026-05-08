@@ -4,7 +4,7 @@ import System
 import re
 import os
 from datetime import datetime
-import io 
+import io # โหลดโมดูล io เพื่อแก้ปัญหาการเขียน Log ใน IronPython
 
 # --- Load Revit API ---
 clr.AddReference('RevitServices')
@@ -23,11 +23,6 @@ from System.Windows import Window, Thickness, WindowStartupLocation
 from System.Windows.Controls import Label, Button, StackPanel, ListBox, SelectionMode, Orientation, TextBox, CheckBox, TextBlock
 from System.Windows.Media import SolidColorBrush, ColorConverter
 
-# [เพิ่ม Import สำหรับดึงรูปภาพจาก Path]
-from System import Uri, UriKind
-from System.Windows.Controls import Image
-from System.Windows.Media.Imaging import BitmapImage
-
 # ==========================================
 # 1. การตั้งค่าตัวแปรเบื้องต้น
 # ==========================================
@@ -38,7 +33,10 @@ default_exclusions = [
     "Revision Cloud Tags"
 ]
 
-script_version = 'v1.2.3'
+#ระบุชื่อของเวอร์ชั่นเพื่อสำรองการเปลี่ยนแปลง
+script_version = 'v1.2.2'
+
+
 black_color = RevitColor(0, 0, 0)
 
 # ==========================================
@@ -72,13 +70,13 @@ for cat in categories:
         pass
 
 # ==========================================
-# 4. UI Class 
+# 4. UI Class (เขียนแบบรองรับ IronPython 2)
 # ==========================================
 class ExclusionSelector(Window):
     def __init__(self, item_map):
         self.Title = "Select Categories to EXCLUDE"
         self.Width = 480
-        self.Height = 780 
+        self.Height = 750
         self.WindowStartupLocation = WindowStartupLocation.CenterScreen
         self.Background = get_brush("#F5F5F5")
         self.Topmost = True
@@ -90,26 +88,6 @@ class ExclusionSelector(Window):
 
         main_layout = StackPanel()
         main_layout.Margin = Thickness(20)
-
-        # =========================================================
-        # [ส่วนที่แก้] ดึง Logo จากไฟล์ (Direct Path)
-        # =========================================================
-        try:
-            # ---> แก้ไขที่อยู่ไฟล์รูปภาพของคุณตรงนี้ <---
-            logo_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\02_Dynamo_Scripts\ICB\Python Script Demo\MTC_Logo.jpg" 
-            
-            bitmap = BitmapImage(Uri(logo_path, UriKind.Absolute))
-            
-            self.logo_image = Image()
-            self.logo_image.Source = bitmap
-            self.logo_image.Height = 60 # ปรับความสูง Logo ได้ตรงนี้
-            self.logo_image.Margin = Thickness(0, 0, 0, 15) 
-            
-            main_layout.Children.Add(self.logo_image) 
-        except Exception as e:
-            # ถ้าหาไฟล์รูปไม่เจอ โปรแกรมจะข้ามไปเปิด UI ปกติโดยไม่มีรูป ไม่ทำให้แครช
-            pass
-        # =========================================================
 
         header = Label()
         header.Content = "เลือกรายการที่ต้องการ 'ยกเว้น' (Exclude)"
@@ -149,7 +127,7 @@ class ExclusionSelector(Window):
         main_layout.Children.Add(btn_row)
 
         self.listbox = ListBox()
-        self.listbox.Height = 380
+        self.listbox.Height = 400
         self.listbox.SelectionMode = SelectionMode.Extended
         self.listbox.Background = get_brush("#FFFFFF")
         
@@ -236,7 +214,7 @@ if is_active:
             t.Commit()
             OUT_MSG = u"✅ เปลี่ยนสีหมวดหมู่ที่ไม่ได้ยกเว้นสำเร็จจำนวน {} รายการ (เปลี่ยนเป็นสีดำ)".format(change_count)
             
-            # --- เขียน Log ---
+            # --- เขียน Log โดยใช้ io.open แก้ปัญหา IronPython 2 ---
             user_name = os.getenv("USERNAME")
             project_name = doc.Title
             log_action = "Change styles to Black (Exclude {} items)".format(len(excluded_items))
@@ -245,7 +223,9 @@ if is_active:
             log_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\02_Dynamo_Scripts\00_Log\00_Dynamo Script_log.csv"
 
             try:
+                # ใช้ io.open ร่วมกับโหมด a เพื่อต่อท้ายไฟล์ และบังคับให้เป็น UTF-8
                 with io.open(log_path, mode='a', encoding='utf-8') as logfile:
+                    # ต่อข้อความให้เป็น String Format CSV แทนการเรียกใช้ csv module ตรงๆ เลี่ยงปัญหา Newline
                     log_line = u'{},"{}","{}","{}","{}","{}"\n'.format(log_time, user_name, project_name, log_action, log_status, script_version)
                     logfile.write(log_line)
             except Exception as e:
