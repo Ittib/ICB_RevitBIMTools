@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 import io 
 
-# --- Load Revit API ---
+# --- Load Revit API: ดึง Library พื้นฐานของ Revit มาใช้งาน ---
 clr.AddReference('RevitServices')
 from RevitServices.Persistence import DocumentManager
 doc = DocumentManager.Instance.CurrentDBDocument
@@ -14,7 +14,7 @@ doc = DocumentManager.Instance.CurrentDBDocument
 clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import Color as RevitColor, Transaction
 
-# --- Load WPF ---
+# --- Load WPF: ดึง Library สำหรับสร้างหน้าต่าง UI (Windows) ---
 clr.AddReference("PresentationFramework")
 clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
@@ -23,7 +23,7 @@ from System.Windows import Window, Thickness, WindowStartupLocation
 from System.Windows.Controls import Label, Button, StackPanel, ListBox, SelectionMode, Orientation, TextBox, CheckBox, TextBlock
 from System.Windows.Media import SolidColorBrush, ColorConverter
 
-# [เพิ่ม Import สำหรับดึงรูปภาพจาก Path]
+# [เพิ่ม Import สำหรับดึงรูปภาพจาก Path เพื่อแสดงผลในหน้าต่าง UI]
 from System import Uri, UriKind
 from System.Windows.Controls import Image
 from System.Windows.Media.Imaging import BitmapImage
@@ -31,38 +31,44 @@ from System.Windows.Media.Imaging import BitmapImage
 # ==========================================
 # 1. การตั้งค่าตัวแปรเบื้องต้น
 # ==========================================
+# เช็คว่าให้ Script ทำงานหรือไม่ (รับค่าจาก Node แรกของ Dynamo)
 is_active = IN[0] if isinstance(IN[0], bool) else True
 
+# รายชื่อรายการที่ต้องการให้ "ยกเว้น" ไว้เป็นค่าเริ่มต้น
 default_exclusions = [
     "Revision Clouds",
     "Revision Cloud Tags"
 ]
 
 script_version = 'v1.2.3'
-black_color = RevitColor(0, 0, 0)
+black_color = RevitColor(0, 0, 0) # เตรียมค่าสีดำ (0,0,0)
 
 # ==========================================
-# 2. ฟังก์ชันช่วยเหลือ
+# 2. ฟังก์ชันช่วยเหลือ (Utility Functions)
 # ==========================================
+# ฟังก์ชันสำหรับเรียงลำดับชื่อแบบธรรมชาติ (เช่น 1, 2, 10 ไม่ใช่ 1, 10, 2)
 def natural_sort_key(text):
     return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]
 
+# ฟังก์ชันเปลี่ยนรหัสสี Hex (#FFFFFF) ให้เป็นสีที่ UI ใช้งานได้
 def get_brush(hex_code):
     return SolidColorBrush(ColorConverter.ConvertFromString(hex_code))
 
 # ==========================================
-# 3. เตรียมข้อมูล Category และ Subcategory
+# 3. เตรียมข้อมูล Category และ Subcategory จากไฟล์ Revit
 # ==========================================
 item_data_map = {}
 categories = doc.Settings.Categories
 
 for cat in categories:
     try:
+        # ข้ามไฟล์ที่มาจาก CAD Link (.dwg)
         if ".dwg" in cat.Name.lower():
             continue
             
         item_data_map[cat.Name] = cat
         
+        # ถ้ามี SubCategories ให้เก็บชื่อในรูปแบบ "Category > SubCategory"
         if cat.SubCategories.Size > 0:
             for subcat in cat.SubCategories:
                 if ".dwg" not in subcat.Name.lower():
@@ -72,16 +78,17 @@ for cat in categories:
         pass
 
 # ==========================================
-# 4. UI Class 
+# 4. UI Class: ส่วนการสร้างหน้าต่างเลือกรายการ
 # ==========================================
 class ExclusionSelector(Window):
     def __init__(self, item_map):
+        # ตั้งค่าพื้นฐานหน้าต่าง (ขนาด, ตําแหน่ง, สีกรอบ)
         self.Title = "Select Categories to EXCLUDE"
         self.Width = 480
         self.Height = 780 
         self.WindowStartupLocation = WindowStartupLocation.CenterScreen
         self.Background = get_brush("#F5F5F5")
-        self.Topmost = True
+        self.Topmost = True # ให้หน้าต่างอยู่บนสุดเสมอ
         
         self.item_map = item_map
         self.sorted_names = sorted(self.item_map.keys(), key=natural_sort_key)
@@ -91,26 +98,19 @@ class ExclusionSelector(Window):
         main_layout = StackPanel()
         main_layout.Margin = Thickness(20)
 
-        # =========================================================
-        # [ส่วนที่แก้] ดึง Logo จากไฟล์ (Direct Path)
-        # =========================================================
+        # --- ส่วนการดึง Logo มาแสดงผล ---
         try:
-            # ---> แก้ไขที่อยู่ไฟล์รูปภาพของคุณตรงนี้ <---
             logo_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\02_Dynamo_Scripts\ICB\Python Script Demo\MTC_Logo.jpg" 
-            
             bitmap = BitmapImage(Uri(logo_path, UriKind.Absolute))
-            
             self.logo_image = Image()
             self.logo_image.Source = bitmap
-            self.logo_image.Height = 60 # ปรับความสูง Logo ได้ตรงนี้
+            self.logo_image.Height = 60
             self.logo_image.Margin = Thickness(0, 0, 0, 15) 
-            
             main_layout.Children.Add(self.logo_image) 
-        except Exception as e:
-            # ถ้าหาไฟล์รูปไม่เจอ โปรแกรมจะข้ามไปเปิด UI ปกติโดยไม่มีรูป ไม่ทำให้แครช
-            pass
-        # =========================================================
+        except:
+            pass # ถ้าหารูปไม่เจอให้ข้ามไป
 
+        # ส่วนหัวข้อและคำเตือน
         header = Label()
         header.Content = "เลือกรายการที่ต้องการ 'ยกเว้น' (Exclude)"
         header.FontSize = 16
@@ -123,12 +123,14 @@ class ExclusionSelector(Window):
         desc.Margin = Thickness(5, 0, 0, 15)
         main_layout.Children.Add(desc)
 
+        # ส่วนช่องค้นหา (Search Box)
         self.search_box = TextBox()
         self.search_box.Height = 25
         self.search_box.Margin = Thickness(0, 0, 0, 10)
         self.search_box.TextChanged += self.on_search_changed
         main_layout.Children.Add(self.search_box)
 
+        # ปุ่ม Select All / Select None
         btn_row = StackPanel()
         btn_row.Orientation = Orientation.Horizontal
         btn_row.Margin = Thickness(0, 0, 0, 10)
@@ -148,14 +150,15 @@ class ExclusionSelector(Window):
         btn_row.Children.Add(btn_none)
         main_layout.Children.Add(btn_row)
 
+        # ส่วนรายการเลือก (ListBox ที่บรรจุ CheckBox)
         self.listbox = ListBox()
         self.listbox.Height = 380
         self.listbox.SelectionMode = SelectionMode.Extended
         self.listbox.Background = get_brush("#FFFFFF")
-        
         self.refresh_list("")
         main_layout.Children.Add(self.listbox)
 
+        # ปุ่มยืนยันการทำงาน
         btn_submit = Button()
         btn_submit.Content = "CONFIRM: เปลี่ยนสีรายการที่เหลือเป็นสีดำ"
         btn_submit.Height = 50
@@ -168,6 +171,7 @@ class ExclusionSelector(Window):
 
         self.Content = main_layout
 
+    # ฟังก์ชันอัปเดตรายการใน ListBox เมื่อมีการค้นหา
     def refresh_list(self, txt):
         self.listbox.Items.Clear()
         search = txt.lower()
@@ -177,14 +181,14 @@ class ExclusionSelector(Window):
                     cb = CheckBox()
                     cb.Content = name
                     cb.Click += self.sync_checks
-                    
+                    # เช็คว่าชื่อนี้เป็นค่าเริ่มต้นที่ต้องยกเว้นหรือไม่
                     for default_ex in default_exclusions:
                         if default_ex == name or default_ex in name.split("  >  "):
                             cb.IsChecked = True
-                            
                     self.checkbox_map[name] = cb
                 self.listbox.Items.Add(self.checkbox_map[name])
 
+    # ฟังก์ชันช่วยให้ติ๊กถูกหลายๆ อันพร้อมกันได้เมื่อกดเลือก (Select)
     def sync_checks(self, sender, e):
         state = sender.IsChecked
         if sender in self.listbox.SelectedItems:
@@ -192,6 +196,7 @@ class ExclusionSelector(Window):
                 if isinstance(item, CheckBox):
                     item.IsChecked = state
 
+    # ทำงานเมื่อพิมพ์ในช่องค้นหา
     def on_search_changed(self, sender, e):
         self.refresh_list(self.search_box.Text)
 
@@ -203,6 +208,7 @@ class ExclusionSelector(Window):
         for name in self.checkbox_map:
             self.checkbox_map[name].IsChecked = False
 
+    # ทำงานเมื่อกดตกลง: รวบรวมข้อมูลรายการที่ถูก "ติ๊กถูก"
     def on_submit(self, sender, e):
         for name, cb in self.checkbox_map.items():
             if cb.IsChecked:
@@ -221,11 +227,13 @@ if is_active:
         if form.ShowDialog():
             excluded_items = form.excluded_list
             
+            # เริ่มแก้ไขข้อมูลใน Revit
             t = Transaction(doc, "Change Other Categories to Black")
             t.Start()
             
             change_count = 0
             for name, cat_obj in item_data_map.items():
+                # ถ้า Category นั้นๆ "ไม่ได้" อยู่ในรายการที่เลือกยกเว้น ให้เปลี่ยนสีเป็นดำ
                 if cat_obj not in excluded_items:
                     try:
                         cat_obj.LineColor = black_color
@@ -236,7 +244,7 @@ if is_active:
             t.Commit()
             OUT_MSG = u"✅ เปลี่ยนสีหมวดหมู่ที่ไม่ได้ยกเว้นสำเร็จจำนวน {} รายการ (เปลี่ยนเป็นสีดำ)".format(change_count)
             
-            # --- เขียน Log ---
+            # --- บันทึกประวัติการใช้งาน (Log) ---
             user_name = os.getenv("USERNAME")
             project_name = doc.Title
             log_action = "Change styles to Black (Exclude {} items)".format(len(excluded_items))
@@ -245,6 +253,7 @@ if is_active:
             log_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\02_Dynamo_Scripts\00_Log\00_Dynamo Script_log.csv"
 
             try:
+                # บันทึกข้อมูลลง CSV แบบรองรับภาษาไทย (UTF-8)
                 with io.open(log_path, mode='a', encoding='utf-8') as logfile:
                     log_line = u'{},"{}","{}","{}","{}","{}"\n'.format(log_time, user_name, project_name, log_action, log_status, script_version)
                     logfile.write(log_line)
@@ -254,4 +263,5 @@ if is_active:
     except Exception as e:
         OUT_MSG = u"❌ เกิดข้อผิดพลาด: " + str(e)
 
+# ส่งข้อความผลลัพธ์ออกไปยัง Dynamo Node
 OUT = OUT_MSG
