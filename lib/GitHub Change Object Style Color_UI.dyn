@@ -1,0 +1,160 @@
+{
+  "Uuid": "dc6cce9b-8e98-4285-b064-0a357259c00f",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "GitHub Change Object Style Color_UI",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\nimport time\r\nimport os\r\n\r\n# นำเข้าไลบรารีของ .NET สำหรับจัดการ HTTP Request และ File\r\nclr.AddReference('System')\r\nfrom System.Net import WebClient, ServicePointManager, SecurityProtocolType\r\nfrom System.Text import Encoding\r\nfrom System.IO import File\r\n\r\n# --- บังคับให้ใช้ TLS 1.2 --- \r\nServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12\r\n\r\n# --- [SETTING] Path ต่างๆ ---\r\ntoken_file_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\01_Python-Scripts\\02_Git Code Importer\\00_Data\\ICB_Note.txt\"\r\nurl = \"https://raw.githubusercontent.com/Ittib/ICB_RevitBIMTools/refs/heads/main/tools/Object%26LineStyle/MTC_Change_Object_%26_Line_Style_Color_UI.py\"\r\nlocal_fallback_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\02_Dynamo_Scripts\\ICB\\Python Script Demo\\MTC_Change_Object_&_Line_Style_Color_UI.py\"\r\n\r\ndef get_token(path):\r\n    try:\r\n        with open(path, 'r') as f:\r\n            return f.read().strip()\r\n    except:\r\n        return None\r\n\r\nscript_content = \"\"\r\nsource_info = \"\"\r\n\r\n# --- เริ่มการดึงโค้ด ---\r\ntry:\r\n    token = get_token(token_file_path)\r\n    if not token:\r\n        raise Exception(\"Token file not found or cannot be read.\")\r\n\r\n    req_url = url + \"?t=\" + str(int(time.time()))\r\n\r\n    client = WebClient()\r\n    client.Headers.Add('Authorization', 'token %s' % token)\r\n    client.Encoding = Encoding.UTF8\r\n\r\n    script_content = client.DownloadString(req_url)\r\n    source_info = \"🌐 Loaded from GitHub\"\r\n\r\nexcept Exception as e:\r\n    if os.path.exists(local_fallback_path):\r\n        try:\r\n            script_content = File.ReadAllText(local_fallback_path, Encoding.UTF8)\r\n            source_info = \"⚠️ Loaded from Local Fallback\"\r\n        except Exception as read_e:\r\n            script_content = \"\"\r\n            OUT = \"❌ Error reading Local file: \" + str(read_e)\r\n    else:\r\n        script_content = \"\"\r\n        OUT = \"❌ Error fetching GitHub & No Local file: \" + str(e)\r\n\r\n# --- รันโค้ดที่ดึงมาได้ ---\r\nif script_content:\r\n    try:\r\n        script_content = script_content.replace(\"\\r\\n\", \"\\n\")\r\n        \r\n        # รันใน globals() เพื่อให้โค้ดที่ดึงมามองเห็นตัวแปร IN \r\n        # และให้ตัวแปร OUT จากโค้ด UI ถูกส่งกลับออกไปที่ Dynamo ได้โดยตรง\r\n        exec(script_content, globals())\r\n\r\n    except Exception as run_e:\r\n        # หากโค้ดดึงมาได้แต่รันพัง (เช่น จัดหน้าต่างผิด, หาโมดูลไม่เจอ) จะแสดงให้เห็นตรงนี้\r\n        OUT = \"❌ Execution Error (รันโค้ดพัง): \" + str(run_e)",
+      "Engine": "IronPython2",
+      "EngineName": "IronPython2",
+      "VariableInputPorts": true,
+      "Id": "aede56be1076423a8a0deb14faa55865",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "ecca1890252a44dcb044437bb00a51da",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "ac68ca554c934319b5cc6910ec734e0a",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 420.0,
+      "WatchHeight": 38.0,
+      "Id": "dcd80b0f8b8d4b8d8f2e3d7e701c0efc",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "6151fc0e068c44d7ae5395a04fad94d9",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "4b143431d55449db9b4eac26c3f13a31",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "ac68ca554c934319b5cc6910ec734e0a",
+      "End": "6151fc0e068c44d7ae5395a04fad94d9",
+      "Id": "4d4bdf27114e4035bcc92219f9048c91",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "2.19",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "6.1",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.19.3.6394",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "aede56be1076423a8a0deb14faa55865",
+        "Name": "เปลี่ยน Object และ Line Style เป็นสีดำ ยกเว้นสิ่งที่เลือกผ่าน UI",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -291.181358811414,
+        "Y": 117.35997477427044
+      },
+      {
+        "Id": "dcd80b0f8b8d4b8d8f2e3d7e701c0efc",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 315.24624312011235,
+        "Y": 120.89752290184347
+      }
+    ],
+    "Annotations": [],
+    "X": 275.53938866328372,
+    "Y": 87.1146644497679,
+    "Zoom": 0.98854889960476833
+  }
+}

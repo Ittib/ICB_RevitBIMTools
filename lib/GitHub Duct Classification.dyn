@@ -1,0 +1,285 @@
+{
+  "Uuid": "dc892907-9688-4fdb-a33a-31501b66ee9b",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "GitHub Duct Classification",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\nimport urllib.request\r\nimport time\r\nimport os\r\n\r\n# --- [SETTING] Path ต่างๆ ---\r\n# 1. Path เก็บ Token ลับ (ห้ามฝังในโค้ด)\r\ntoken_file_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\01_Python-Scripts\\02_Git Code Importer\\00_Data\\ICB_Note.txt\"\r\n# 2. URL ของสคริปต์หลักบน GitHub\r\nurl = \"https://raw.githubusercontent.com/Ittib/ICB_RevitBIMTools/refs/heads/main/tools/DuctClassification/MTC_Duct%20Classification.py\"\r\n# 3. Path ของสคริปต์สำรอง (Local Fallback)\r\nlocal_fallback_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\02_Dynamo_Scripts\\ICB\\Python Script Demo\\MTC_Duct Classification.py\"\r\n\r\ndef get_token(path):\r\n    try:\r\n        with open(path, 'r') as f:\r\n            return f.read().strip()\r\n    except:\r\n        return None\r\n\r\nscript_content = \"\"\r\nsource_info = \"\"\r\n\r\n# --- เริ่มการดึงโค้ด ---\r\ntry:\r\n    token = get_token(token_file_path)\r\n    if not token:\r\n        raise Exception(\"Token file not found\")\r\n\r\n    # ดึงจาก GitHub\r\n    req_url = url + \"?t=\" + str(int(time.time()))\r\n    req = urllib.request.Request(req_url)\r\n    req.add_header('Authorization', 'token %s' % token)\r\n\r\n    with urllib.request.urlopen(req, timeout=10) as response:\r\n        script_content = response.read().decode('utf-8')\r\n        source_info = \"🌐 Loaded from GitHub (Latest)\"\r\n\r\nexcept Exception as e:\r\n    # --- [LOCAL FALLBACK] หากเน็ตหลุดหรือ Token มีปัญหา ---\r\n    if os.path.exists(local_fallback_path):\r\n        with open(local_fallback_path, 'r', encoding='utf-8') as f:\r\n            script_content = f.read()\r\n            source_info = \"⚠️ Network Offline: Loaded from Local Fallback\"\r\n    else:\r\n        source_info = \"❌ Error: Cannot reach GitHub and Local file is missing!\"\r\n\r\n# --- รันโค้ดที่ดึงมาได้ ---\r\nif script_content:\r\n    try:\r\n        exec(script_content)\r\n        OUT = source_info\r\n    except Exception as run_e:\r\n        OUT = \"❌ Script Execution Error: \" + str(run_e)\r\nelse:\r\n    OUT = source_info",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "50f03b07e4694b21be5b59e53587dedb",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "ec6b236406e141b1805f18b51db73c02",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "3981d293fa36450a82cde3c414913f2e",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "f564b4190dc1480abe0c4331a242f59c",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "64660a9af45744f688f22442ee31355a",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "fca014f27b394eef8c7fce84f5469af4",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 195,
+      "SelectedString": "OST_DuctCurves",
+      "Id": "f6b34300b7fc45e0a89922e30c597575",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "21b0b823b4ec4c35a83a5c17651f9def",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\n\r\n# Import RevitAPI\r\nclr.AddReference(\"RevitAPI\")\r\nimport Autodesk\r\nfrom Autodesk.Revit.DB import *\r\n\r\n# Import DocumentManager and TransactionManager\r\nclr.AddReference(\"RevitServices\")\r\nimport RevitServices\r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom RevitServices.Transactions import TransactionManager\r\n\r\ndoc = DocumentManager.Instance.CurrentDBDocument\r\n\r\n# กรองค่า Null ออกจาก List ก่อนเริ่มทำงาน\r\ninput_items = IN[0] if isinstance(IN[0], list) else [IN[0]]\r\nitems = [UnwrapElement(i) for i in input_items if i is not None]\r\n\r\nresults = []\r\n\r\n# ปรับฟังก์ชันให้เช็ค object ก่อนดึง parameter\r\ndef get_value_mm(elem, param_name):\r\n    if elem is None: return 0\r\n    param = elem.LookupParameter(param_name)\r\n    if param and param.HasValue:\r\n        return param.AsDouble() * 304.8\r\n    return 0\r\n\r\nTransactionManager.Instance.EnsureInTransaction(doc)\r\n\r\nfor duct in items:\r\n    # เช็คซ้ำอีกครั้งเพื่อความชัวร์\r\n    if duct is None: continue\r\n    \r\n    w = get_value_mm(duct, \"Width\")\r\n    h = get_value_mm(duct, \"Height\")\r\n    d = get_value_mm(duct, \"Diameter\")\r\n    \r\n    max_val = max(w, h, d)\r\n    \r\n    classification = \"\"\r\n    if max_val < 600:\r\n        classification = \"Light\"\r\n    elif 600 <= max_val <= 750:\r\n        classification = \"Light-Medium\"\r\n    elif 775 <= max_val <= 1500:\r\n        classification = \"Medium\"\r\n    elif 1525 <= max_val <= 1825:\r\n        classification = \"Heavy\"\r\n    elif 1850 <= max_val <= 2275:\r\n        classification = \"Heavy\"\r\n    elif max_val >= 2300:\r\n        classification = \"Extra Heavy\"\r\n    else:\r\n        classification = \"Out of Range\"\r\n\r\n    target_param = duct.LookupParameter(\"Duct Classification\")\r\n    if target_param and not target_param.IsReadOnly:\r\n        target_param.Set(classification)\r\n        results.append(classification)\r\n    else:\r\n        results.append(\"Failed: Parameter not found\")\r\n\r\nTransactionManager.Instance.TransactionTaskDone()\r\n\r\nOUT = results",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "eea9055226b74453be5c34ac406ece28",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "ee3560eee9e24516828dde21b82ba6b1",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "ac39b2855a624593aeaa2f68ee3f03a2",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 245.0,
+      "WatchHeight": 38.0,
+      "Id": "1bc4e5ea2d084c57bd8ce7464e4d7189",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "297daedc385c411da77ca04c7dd20450",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "c3183a47914f496a93432c70ec150618",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "3981d293fa36450a82cde3c414913f2e",
+      "End": "297daedc385c411da77ca04c7dd20450",
+      "Id": "3a5d94812da742de988d84622145906d",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "fca014f27b394eef8c7fce84f5469af4",
+      "End": "ec6b236406e141b1805f18b51db73c02",
+      "Id": "bdbd02daa3b540a68abe2c6831dbe581",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "21b0b823b4ec4c35a83a5c17651f9def",
+      "End": "64660a9af45744f688f22442ee31355a",
+      "Id": "a972651f2e3441868bbf60323f5ddf36",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "2.19",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "6.1",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.19.3.6394",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "50f03b07e4694b21be5b59e53587dedb",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 453.52703663603188,
+        "Y": 224.83584561317213
+      },
+      {
+        "Id": "f564b4190dc1480abe0c4331a242f59c",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -8.0,
+        "Y": 254.0
+      },
+      {
+        "Id": "f6b34300b7fc45e0a89922e30c597575",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -347.0,
+        "Y": 253.0
+      },
+      {
+        "Id": "eea9055226b74453be5c34ac406ece28",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 304.34988238486028,
+        "Y": 72.878992835581187
+      },
+      {
+        "Id": "1bc4e5ea2d084c57bd8ce7464e4d7189",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 695.913433271764,
+        "Y": 247.43609689416058
+      }
+    ],
+    "Annotations": [],
+    "X": -218.73070344280063,
+    "Y": 143.35397977766712,
+    "Zoom": 0.82770257044119055
+  }
+}

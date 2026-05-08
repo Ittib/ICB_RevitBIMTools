@@ -1,0 +1,160 @@
+{
+  "Uuid": "ff9aaa66-cdb3-454c-9795-ab3521e1c48a",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "GitHub Load Object Style Color",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\nimport urllib.request\r\nimport time\r\nimport os\r\n\r\n# --- [SETTING] Path ต่างๆ ---\r\n# 1. Path เก็บ Token ลับ (ห้ามฝังในโค้ด)\r\ntoken_file_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\01_Python-Scripts\\02_Git Code Importer\\00_Data\\ICB_Note.txt\"\r\n# 2. URL ของสคริปต์หลักบน GitHub\r\nurl = \"https://raw.githubusercontent.com/Ittib/ICB_RevitBIMTools/refs/heads/main/tools/Object%26LineStyle/MTC_Load_Object%26Line_Style_Setting.py\"\r\n# 3. Path ของสคริปต์สำรอง (Local Fallback)\r\nlocal_fallback_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\02_Dynamo_Scripts\\ICB\\Python Script Demo\\MTC_Load_Object&Line_Style_Setting.py\"\r\n\r\ndef get_token(path):\r\n    try:\r\n        with open(path, 'r') as f:\r\n            return f.read().strip()\r\n    except:\r\n        return None\r\n\r\nscript_content = \"\"\r\nsource_info = \"\"\r\n\r\n# --- เริ่มการดึงโค้ด ---\r\ntry:\r\n    token = get_token(token_file_path)\r\n    if not token:\r\n        raise Exception(\"Token file not found\")\r\n\r\n    # ดึงจาก GitHub\r\n    req_url = url + \"?t=\" + str(int(time.time()))\r\n    req = urllib.request.Request(req_url)\r\n    req.add_header('Authorization', 'token %s' % token)\r\n\r\n    with urllib.request.urlopen(req, timeout=10) as response:\r\n        script_content = response.read().decode('utf-8')\r\n        source_info = \"🌐 Loaded from GitHub (Latest)\"\r\n\r\nexcept Exception as e:\r\n    # --- [LOCAL FALLBACK] หากเน็ตหลุดหรือ Token มีปัญหา ---\r\n    if os.path.exists(local_fallback_path):\r\n        with open(local_fallback_path, 'r', encoding='utf-8') as f:\r\n            script_content = f.read()\r\n            source_info = \"⚠️ Network Offline: Loaded from Local Fallback\"\r\n    else:\r\n        source_info = \"❌ Error: Cannot reach GitHub and Local file is missing!\"\r\n\r\n# --- รันโค้ดที่ดึงมาได้ ---\r\nif script_content:\r\n    try:\r\n        exec(script_content)\r\n        OUT = source_info\r\n    except Exception as run_e:\r\n        OUT = \"❌ Script Execution Error: \" + str(run_e)\r\nelse:\r\n    OUT = source_info",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "68832261f3344f2db08a61c07cc154d4",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "1b47ae5273ce4653902cfd4d14d7fd18",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "4aebfe3240f24329a3998fbddbea54ab",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 178.0,
+      "WatchHeight": 38.0,
+      "Id": "77185c0f75414d63983676c5abfe70ab",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "d85251528348430f806cea155a1a1252",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "1903687f53ed4b6e9374e1cfa95c0fad",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "4aebfe3240f24329a3998fbddbea54ab",
+      "End": "d85251528348430f806cea155a1a1252",
+      "Id": "f859ff77940f4f3bad3f122df0b36c64",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "2.19",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "6.1",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.19.3.6394",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "68832261f3344f2db08a61c07cc154d4",
+        "Name": "ดึง Code จาก GitHub มาใช้ โหลด Object และ Line Style ",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 107.83117875876849,
+        "Y": 139.50057989535605
+      },
+      {
+        "Id": "77185c0f75414d63983676c5abfe70ab",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 650.27857721128657,
+        "Y": 148.9860994819775
+      }
+    ],
+    "Annotations": [],
+    "X": -141.75906766828041,
+    "Y": 61.999489830947994,
+    "Zoom": 1.0606077223602073
+  }
+}
