@@ -1,0 +1,243 @@
+import clr
+import sys
+import System
+import re
+import csv
+import os
+from datetime import datetime
+
+# --- Load Revit API ---
+clr.AddReference('RevitServices')
+from RevitServices.Persistence import DocumentManager
+doc = DocumentManager.Instance.CurrentDBDocument
+
+clr.AddReference('RevitAPI')
+from Autodesk.Revit.DB import Color as RevitColor, Transaction
+
+# --- Load WPF ---
+clr.AddReference("PresentationFramework")
+clr.AddReference("PresentationCore")
+clr.AddReference("WindowsBase")
+
+from System.Windows import Window, Thickness, WindowStartupLocation
+from System.Windows.Controls import Label, Button, StackPanel, ListBox, SelectionMode, Orientation, TextBox, CheckBox, TextBlock
+from System.Windows.Media import SolidColorBrush, ColorConverter
+
+# ==========================================
+# 1. การตั้งค่าตัวแปรเบื้องต้น
+# ==========================================
+is_active = IN[0] if isinstance(IN[0], bool) else True
+
+# รายการที่อยากให้ติ๊กถูกไว้ล่วงหน้า (ยกเว้นเป็นค่า Default)
+default_exclusions = [
+    "Revision Clouds",
+    "Revision Cloud Tags"
+]
+
+script_version = 'v1.15'
+black_color = RevitColor(0, 0, 0)
+
+# ==========================================
+# 2. ฟังก์ชันช่วยเหลือ
+# ==========================================
+def natural_sort_key(text):
+    return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]
+
+def get_brush(hex_code):
+    return SolidColorBrush(ColorConverter.ConvertFromString(hex_code))
+
+# ==========================================
+# 3. เตรียมข้อมูล Category และ Subcategory จาก Project
+# ==========================================
+item_data_map = {}
+categories = doc.Settings.Categories
+
+for cat in categories:
+    try:
+        # ข้ามไฟล์ DWG เสมอเพื่อป้องกัน Error หรือลบออกถ้าต้องการเปลี่ยนสี DWG ด้วย
+        if ".dwg" in cat.Name.lower():
+            continue
+            
+        item_data_map[cat.Name] = cat
+        
+        if cat.SubCategories.Size > 0:
+            for subcat in cat.SubCategories:
+                if ".dwg" not in subcat.Name.lower():
+                    sub_name = "{}  >  {}".format(cat.Name, subcat.Name)
+                    item_data_map[sub_name] = subcat
+    except:
+        pass
+
+# ==========================================
+# 4. UI Class (สำหรับเลือกสิ่งที่ต้องการยกเว้น)
+# ==========================================
+class ExclusionSelector(Window):
+    def __init__(self, item_map):
+        self.Title = "Select Categories to EXCLUDE"
+        self.Width = 480
+        self.Height = 750
+        self.WindowStartupLocation = WindowStartupLocation.CenterScreen
+        self.Background = get_brush("#F5F5F5")
+        self.Topmost = True
+        
+        self.item_map = item_map
+        self.sorted_names = sorted(self.item_map.keys(), key=natural_sort_key)
+        self.checkbox_map = {} 
+        self.excluded_list = [] # รายการที่จะไม่เปลี่ยนสี
+
+        main_layout = StackPanel()
+        main_layout.Margin = Thickness(20)
+
+        # --- ส่วนหัวและคำอธิบาย ---
+        header = Label()
+        header.Content = "เลือกรายการที่ต้องการ 'ยกเว้น' (Exclude)"
+        header.FontSize = 16
+        header.FontWeight = System.Windows.FontWeights.Bold
+        main_layout.Children.Add(header)
+        
+        desc = TextBlock()
+        desc.Text = "คำเตือน: รายการที่ 'ติ๊กถูก' จะคงสีเดิมไว้ \nส่วนรายการที่ 'ไม่ได้ติ๊ก' จะถูกเปลี่ยนเป็นสีดำทั้งหมด!"
+        desc.Foreground = get_brush("#D32F2F") # สีแดงเพื่อเตือน
+        desc.Margin = Thickness(5, 0, 0, 15)
+        main_layout.Children.Add(desc)
+
+        # --- ช่องค้นหา ---
+        self.search_box = TextBox()
+        self.search_box.Height = 25
+        self.search_box.Margin = Thickness(0, 0, 0, 10)
+        self.search_box.TextChanged += self.on_search_changed
+        main_layout.Children.Add(self.search_box)
+
+        # --- ปุ่ม Select All / None ---
+        btn_row = StackPanel()
+        btn_row.Orientation = Orientation.Horizontal
+        btn_row.Margin = Thickness(0, 0, 0, 10)
+
+        btn_all = Button()
+        btn_all.Content = "Select All"
+        btn_all.Width = 100
+        btn_all.Click += self.mass_all
+
+        btn_none = Button()
+        btn_none.Content = "Select None"
+        btn_none.Width = 100
+        btn_none.Margin = Thickness(10, 0, 0, 0)
+        btn_none.Click += self.mass_none
+
+        btn_row.Children.Add(btn_all)
+        btn_row.Children.Add(btn_none)
+        main_layout.Children.Add(btn_row)
+
+        # --- ListBox รายการ ---
+        self.listbox = ListBox()
+        self.listbox.Height = 400
+        self.listbox.SelectionMode = SelectionMode.Extended
+        self.listbox.Background = get_brush("#FFFFFF")
+        
+        self.refresh_list("")
+        main_layout.Children.Add(self.listbox)
+
+        # --- ปุ่มยืนยัน ---
+        btn_submit = Button()
+        btn_submit.Content = "CONFIRM: เปลี่ยนสีรายการที่เหลือเป็นสีดำ"
+        btn_submit.Height = 50
+        btn_submit.Background = get_brush("#212121") # สีดำ
+        btn_submit.Foreground = get_brush("#FFFFFF")
+        btn_submit.Margin = Thickness(0, 15, 0, 0)
+        btn_submit.FontWeight = System.Windows.FontWeights.Bold
+        btn_submit.Click += self.on_submit
+        main_layout.Children.Add(btn_submit)
+
+        self.Content = main_layout
+
+    def refresh_list(self, txt):
+        self.listbox.Items.Clear()
+        search = txt.lower()
+        for name in self.sorted_names:
+            if search in name.lower():
+                if name not in self.checkbox_map:
+                    cb = CheckBox()
+                    cb.Content = name
+                    cb.Click += self.sync_checks
+                    
+                    # ตรวจสอบว่าเป็นหมวดหมู่ที่ควรติ๊กไว้เป็น Default หรือไม่
+                    for default_ex in default_exclusions:
+                        if default_ex == name or default_ex in name.split("  >  "):
+                            cb.IsChecked = True
+                            
+                    self.checkbox_map[name] = cb
+                self.listbox.Items.Add(self.checkbox_map[name])
+
+    def sync_checks(self, sender, e):
+        state = sender.IsChecked
+        if sender in self.listbox.SelectedItems:
+            for item in self.listbox.SelectedItems:
+                if isinstance(item, CheckBox):
+                    item.IsChecked = state
+
+    def on_search_changed(self, sender, e):
+        self.refresh_list(self.search_box.Text)
+
+    def mass_all(self, s, e):
+        for name in self.checkbox_map:
+            self.checkbox_map[name].IsChecked = True
+
+    def mass_none(self, s, e):
+        for name in self.checkbox_map:
+            self.checkbox_map[name].IsChecked = False
+
+    def on_submit(self, s, e):
+        # เก็บรายการที่ติ๊กถูกไว้เป็นรายการ "ยกเว้น"
+        for name, cb in self.checkbox_map.items():
+            if cb.IsChecked:
+                self.excluded_list.append(self.item_map[name])
+        self.DialogResult = True
+        self.Close()
+
+# ==========================================
+# 5. การรัน UI และแก้ไขข้อมูลใน Revit
+# ==========================================
+OUT_MSG = "UI ถูกยกเลิก หรือไม่ได้ทำการรัน"
+
+if is_active:
+    try:
+        form = ExclusionSelector(item_data_map)
+        if form.ShowDialog():
+            excluded_items = form.excluded_list
+            
+            # เริ่ม Transaction เปลี่ยนสี
+            t = Transaction(doc, "Change Other Categories to Black")
+            t.Start()
+            
+            change_count = 0
+            # ลูปทุก Category/Subcategory หากไม่ได้อยู่ใน excluded_items ให้เปลี่ยนเป็นสีดำ
+            for name, cat_obj in item_data_map.items():
+                if cat_obj not in excluded_items:
+                    try:
+                        cat_obj.LineColor = black_color
+                        change_count += 1
+                    except:
+                        pass
+            
+            t.Commit()
+            OUT_MSG = "✅ เปลี่ยนสีหมวดหมู่ที่ไม่ได้ยกเว้นสำเร็จจำนวน {} รายการ (เปลี่ยนเป็นสีดำ)".format(change_count)
+            
+            # --- เขียน Log ---
+            user_name = os.getenv("USERNAME")
+            project_name = doc.Title
+            log_action = "Change styles to Black (Exclude {} items)".format(len(excluded_items))
+            log_status = "Success"
+            log_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\02_Dynamo_Scripts\00_Log\00_Dynamo Script_log.csv"
+
+            try:
+                with open(log_path, mode='a', newline='', encoding='utf-8') as logfile:
+                    writer = csv.writer(logfile)
+                    writer.writerow([log_time, user_name, project_name, log_action, log_status, script_version])
+            except Exception as e:
+                OUT_MSG += "\n❌ Error saving log: " + str(e)
+
+    except Exception as e:
+        OUT_MSG = "❌ เกิดข้อผิดพลาด: " + str(e)
+
+OUT = OUT_MSG
