@@ -4,8 +4,8 @@ import sys
 import System
 import re
 import os
+import time  # [เพิ่ม] สำหรับการหน่วงเวลา (Method 2)
 from datetime import datetime
-import io 
 
 # --- Load Revit API ---
 clr.AddReference('RevitServices')
@@ -13,14 +13,12 @@ from RevitServices.Persistence import DocumentManager
 doc = DocumentManager.Instance.CurrentDBDocument
 
 clr.AddReference('RevitAPI')
-# [แก้ไข 1] เปลี่ยนจาก ViewSheetSetting เป็น ViewSheetSet
 from Autodesk.Revit.DB import Color as RevitColor, Transaction, FilteredElementCollector, ViewSheetSet, PrintSetting
 
 # --- Load WPF & Drawing ---
 clr.AddReference("PresentationFramework")
 clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
-# [แก้ไข 2] เพิ่ม Reference สำหรับดึงข้อมูล Printer ในเครื่อง
 clr.AddReference("System.Drawing")
 
 from System.Windows import Window, Thickness, WindowStartupLocation
@@ -36,12 +34,12 @@ from System.Drawing.Printing import PrinterSettings
 # ==========================================
 is_active = IN[0] if isinstance(IN[0], bool) else True
 default_exclusions = ["Revision Clouds", "Revision Cloud Tags"]
-script_version = 'v2.1.0 (IronPython 2)'
 black_color = RevitColor(0, 0, 0)
-target_printer_name = "PDF24" # ใช้เป็นค่า Default ตอนเปิด UI
+target_printer_name = "PDF24" 
+delay_seconds = 30 # [ตั้งค่า] จำนวนวินาทีที่จะรอให้ PDF Printer ทำงาน (ปรับเพิ่มได้)
 
 # ==========================================
-# 2. เตรียมข้อมูล (IronPython 2 Compatible)
+# 2. เตรียมข้อมูล
 # ==========================================
 def natural_sort_key(text):
     return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]
@@ -49,7 +47,6 @@ def natural_sort_key(text):
 def get_brush(hex_code):
     return SolidColorBrush(ColorConverter.ConvertFromString(hex_code))
 
-# เตรียม Category
 item_data_map = {}
 for cat in doc.Settings.Categories:
     try:
@@ -61,23 +58,16 @@ for cat in doc.Settings.Categories:
                     item_data_map["{}  >  {}".format(cat.Name, subcat.Name)] = subcat
     except: pass
 
-# --- ดึงรายชื่อ Printer ในเครื่อง ---
 printers_list = [p for p in PrinterSettings.InstalledPrinters]
 printers_list.sort(key=natural_sort_key)
 
-# --- ดึงข้อมูลการพิมพ์ ---
-pm = doc.PrintManager
-
-# ดึงชื่อ Print Settings
 print_settings_list = []
 ps_elems = FilteredElementCollector(doc).OfClass(PrintSetting).ToElements()
 for ps in ps_elems:
     if ps.Name: print_settings_list.append(ps.Name)
 print_settings_list.sort(key=natural_sort_key)
 
-# ดึงชื่อ View Sheet Sets 
 view_sets_list = []
-# [แก้ไข 1] ดึงข้อมูลจาก ViewSheetSet แทน
 vs_elems = FilteredElementCollector(doc).OfClass(ViewSheetSet).ToElements()
 for vs in vs_elems:
     if vs.Name and not vs.Name.startswith("<"):
@@ -89,7 +79,7 @@ view_sets_list.sort(key=natural_sort_key)
 # ==========================================
 class FullProcessSelector(Window):
     def __init__(self, item_map, p_list, v_list, printer_list):
-        self.Title = "MTC: Color Manager (IronPython 2)"
+        self.Title = "MTC: Color Manager (Large File Support)"
         self.Width = 500
         self.Height = 850 
         self.WindowStartupLocation = WindowStartupLocation.CenterScreen
@@ -104,17 +94,7 @@ class FullProcessSelector(Window):
         main_layout = StackPanel()
         main_layout.Margin = Thickness(20)
 
-        # Logo
-        try:
-            logo_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\02_Dynamo_Scripts\ICB\Python Script Demo\MTC_Logo.jpg" 
-            img = Image()
-            img.Source = BitmapImage(Uri(logo_path, UriKind.Absolute))
-            img.Height = 50
-            img.Margin = Thickness(0,0,0,10)
-            main_layout.Children.Add(img) 
-        except: pass
-
-        main_layout.Children.Add(Label(Content="1. เลือกรายการที่ต้องการคงสีเดิมไว้ (Exclude):", FontWeight=System.Windows.FontWeights.Bold))
+        main_layout.Children.Add(Label(Content="1. เลือกรายการที่ต้องการ Exclude:", FontWeight=System.Windows.FontWeights.Bold))
         self.search_box = TextBox(Height=25, Margin=Thickness(0, 5, 0, 5))
         self.search_box.TextChanged += self.on_search_changed
         main_layout.Children.Add(self.search_box)
@@ -125,13 +105,10 @@ class FullProcessSelector(Window):
 
         main_layout.Children.Add(Label(Content="2. ตั้งค่าการ Plot:", FontWeight=System.Windows.FontWeights.Bold, Margin=Thickness(0,15,0,0)))
         
-        # [แก้ไข 2] เพิ่ม ComboBox สำหรับเลือก Printer
-        main_layout.Children.Add(TextBlock(Text="เลือก Printer / Plotter:", Margin=Thickness(5,5,0,0)))
+        main_layout.Children.Add(TextBlock(Text="เลือก Printer:", Margin=Thickness(5,5,0,0)))
         self.combo_printer = ComboBox(ItemsSource=printer_list, Margin=Thickness(0,2,0,10))
-        if target_printer_name in printer_list:
-            self.combo_printer.SelectedItem = target_printer_name
-        elif printer_list:
-            self.combo_printer.SelectedIndex = 0
+        if target_printer_name in printer_list: self.combo_printer.SelectedItem = target_printer_name
+        elif printer_list: self.combo_printer.SelectedIndex = 0
         main_layout.Children.Add(self.combo_printer)
 
         main_layout.Children.Add(TextBlock(Text="เลือก Print Setting:", Margin=Thickness(5,5,0,0)))
@@ -139,12 +116,12 @@ class FullProcessSelector(Window):
         if p_list: self.combo_ps.SelectedIndex = 0
         main_layout.Children.Add(self.combo_ps)
 
-        main_layout.Children.Add(TextBlock(Text="เลือก View / Sheet Set:", Margin=Thickness(5,5,0,0)))
+        main_layout.Children.Add(TextBlock(Text="เลือก View Set:", Margin=Thickness(5,5,0,0)))
         self.combo_vs = ComboBox(ItemsSource=v_list, Margin=Thickness(0,2,0,15))
         if v_list: self.combo_vs.SelectedIndex = 0
         main_layout.Children.Add(self.combo_vs)
 
-        self.cb_do_print = CheckBox(Content="สั่ง Plot ทันที (คืนค่าสีอัตโนมัติหลัง Plot)", IsChecked=True, Margin=Thickness(0,0,0,10))
+        self.cb_do_print = CheckBox(Content="สั่ง Plot ทันที (หน่วงเวลา {} วินาทีเพื่อไฟล์ใหญ่)".format(delay_seconds), IsChecked=True, Margin=Thickness(0,0,0,10))
         main_layout.Children.Add(self.cb_do_print)
 
         btn_submit = Button(Content="RUN PROCESS", Height=50, Background=get_brush("#212121"), Foreground=get_brush("#FFFFFF"), FontWeight=System.Windows.FontWeights.Bold)
@@ -161,18 +138,15 @@ class FullProcessSelector(Window):
                 if name not in self.checkbox_map:
                     cb = CheckBox(Content=name)
                     for d_ex in default_exclusions:
-                        if d_ex == name or d_ex in name.split("  >  "):
-                            cb.IsChecked = True
+                        if d_ex == name or d_ex in name.split("  >  "): cb.IsChecked = True
                     self.checkbox_map[name] = cb
                 self.listbox.Items.Add(self.checkbox_map[name])
 
-    def on_search_changed(self, sender, e):
-        self.refresh_list(self.search_box.Text)
+    def on_search_changed(self, sender, e): self.refresh_list(self.search_box.Text)
 
     def on_submit(self, sender, e):
         for name in self.checkbox_map:
-            if self.checkbox_map[name].IsChecked:
-                self.excluded_list.append(self.item_map[name])
+            if self.checkbox_map[name].IsChecked: self.excluded_list.append(self.item_map[name])
         self.DialogResult = True
         self.Close()
 
@@ -183,33 +157,35 @@ OUT_MSG = u"UI ถูกยกเลิก"
 
 if is_active:
     try:
-        # โยน printers_list เข้าไปใน UI Class ด้วย
         form = FullProcessSelector(item_data_map, print_settings_list, view_sets_list, printers_list)
         if form.ShowDialog():
-            # 4.1 Backup
+            
+            # --- [Method 1] Backup & Change to Black (Optimized) ---
             original_colors = {}
-            for name in item_data_map:
-                try: original_colors[name] = item_data_map[name].LineColor
-                except: pass
-
-            # 4.2 เปลี่ยนเป็นสีดำ
             t_black = Transaction(doc, "MTC: Temp Black")
             t_black.Start()
             for name in item_data_map:
-                if item_data_map[name] not in form.excluded_list:
-                    try: item_data_map[name].LineColor = black_color
+                cat = item_data_map[name]
+                if cat not in form.excluded_list:
+                    try:
+                        curr = cat.LineColor
+                        if curr.Red != 0 or curr.Green != 0 or curr.Blue != 0:
+                            original_colors[name] = curr
+                            cat.LineColor = black_color
                     except: pass
             t_black.Commit()
             
-# 4.3 Plot
+# --- 4.3 Plot ---
             if form.cb_do_print.IsChecked:
                 try:
                     pm = doc.PrintManager
                     
-                    # เซ็ต Printer ตามที่เลือกใน UI
+                    # 1. เปิด Transaction สำหรับการเปลี่ยนตั้งค่าหน้ากระดาษและเซ็ตปริ้นท์
+                    t_print_setup = Transaction(doc, "MTC: Setup Print")
+                    t_print_setup.Start()
+                    
                     selected_printer = form.combo_printer.SelectedItem
                     pm.SelectNewPrintDriver(selected_printer)
-                    
                     pm.PrintRange = pm.PrintRange.Select
                     
                     # Apply Print Setting
@@ -217,21 +193,29 @@ if is_active:
                         if ps.Name == form.combo_ps.SelectedItem:
                             pm.PrintSetup.CurrentPrintSetting = ps
                             break
-                    
+                            
                     # Apply View Set
                     for vs in vs_elems:
                         if vs.Name == form.combo_vs.SelectedItem:
                             pm.ViewSheetSetting.CurrentViewSheetSet = vs
                             break
+                            
+                    # ปิด Transaction เพื่อบันทึกการตั้งค่า
+                    t_print_setup.Commit()
                     
-                    # --- แก้ไขตรงนี้: ลบ if pm.CanPrint() ออก แล้วสั่งพิมพ์เลย ---
+                    # 2. สั่งพิมพ์ (ไม่ต้องมี CanPrint)
                     pm.SubmitPrint()
-                    OUT_MSG = u"✅ Plot สำเร็จผ่าน {}!".format(selected_printer)
+                    
+                    # 3. หน่วงเวลาให้ Driver ทำงาน (Method 2)
+                    time.sleep(delay_seconds)
+                    
+                    OUT_MSG = u"✅ ส่งคำสั่ง Plot เรียบร้อย (รอ Spooling {} วินาที)".format(delay_seconds)
                     
                 except Exception as pe:
+                    # ถ้า Error ระหว่างตั้งค่า ให้ยกเลิก Transaction ป้องกันโมเดลค้าง
                     OUT_MSG = u"❌ Plot Error: " + str(pe)
 
-            # 4.4 Restore
+            # --- 4.4 Restore Color ---
             t_restore = Transaction(doc, "MTC: Restore Color")
             t_restore.Start()
             for name in original_colors:
