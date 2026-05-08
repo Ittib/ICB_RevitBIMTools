@@ -4,7 +4,7 @@ import time
 import os
 
 # --- [SETTING] Path ต่างๆ ---
-# 1. Path เก็บ Token ลับ (ห้ามฝังในโค้ด)
+# 1. Path เก็บ Token 
 token_file_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\01_Python-Scripts\02_Git Code Importer\00_Data\ICB_Note.txt"
 # 2. URL ของสคริปต์หลักบน GitHub
 url = "https://raw.githubusercontent.com/Ittib/RevitFilterDeleteTools/refs/heads/main/MTC_Filter%20Cleaner%20Tools.py"
