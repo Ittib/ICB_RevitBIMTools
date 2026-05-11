@@ -1,72 +1,113 @@
 # -*- coding: utf-8 -*-
+"""
+Script: MTC Change Object & Line Style Color 1clickplot
+Purpose: ใช้ Plot ไฟล์ Drawing โดยเปลี่ยนสีเส้นเป็นดำชั่วคราว แล้วคืนค่าหลังเสร็จ
+Workflow: 
+  1. แสดง UI เพื่อเลือกการตั้งค่า
+  2. เปลี่ยนสีทั้งหมดเป็นดำ
+  3. Plot ไฟล์ + รอให้พิมพ์เสร็จ
+  4. คืนค่าสีดั้งเดิม
+"""
+
 import clr
 import sys
 import System
 import re
 import os
-import time  # [เพิ่ม] สำหรับการหน่วงเวลา (Method 2)
+import time
 from datetime import datetime
 
-# --- Load Revit API ---
+# Load Revit API - เพื่อเข้าถึง Document, Categories, PrintManager
 clr.AddReference('RevitServices')
 from RevitServices.Persistence import DocumentManager
-doc = DocumentManager.Instance.CurrentDBDocument
+doc = DocumentManager.Instance.CurrentDBDocument  # Reference ไปยัง Active Document
 
 clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import Color as RevitColor, Transaction, FilteredElementCollector, ViewSheetSet, PrintSetting
 
-# --- Load WPF & Drawing ---
+# Load WPF & Windows UI components - สำหรับ UI ของการเลือก
 clr.AddReference("PresentationFramework")
 clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
 clr.AddReference("System.Drawing")
+clr.AddReference("ReachFramework")
+clr.AddReference("System.Printing")  # สำหรับควบคุมการพิมพ์
+clr.AddReference("System.Windows.Forms")  # สำหรับ Dialog เลือกโฟลเดอร์
 
 from System.Windows import Window, Thickness, WindowStartupLocation
-from System.Windows.Controls import Label, Button, StackPanel, ListBox, SelectionMode, Orientation, TextBox, CheckBox, TextBlock, ComboBox
+from System.Windows.Controls import Label, Button, StackPanel, ListBox, SelectionMode, Orientation, TextBox, CheckBox, TextBlock, ComboBox, RadioButton
 from System.Windows.Media import SolidColorBrush, ColorConverter
 from System import Uri, UriKind
 from System.Windows.Controls import Image
 from System.Windows.Media.Imaging import BitmapImage
 from System.Drawing.Printing import PrinterSettings
+from System.Printing import LocalPrintServer
+from System.Windows.Forms import FolderBrowserDialog, DialogResult
 
 # ==========================================
-# 1. ตั้งค่าเบื้องต้น
+# 1. ตั้งค่าเบื้องต้นของ Script
 # ==========================================
+# ควบคุมว่า script จะทำงานหรือไม่ (รับค่าจาก Dynamo input)
 is_active = IN[0] if isinstance(IN[0], bool) else True
+
+# List ของ Category ที่จะข้ามการเปลี่ยนสี (เพราะเป็นสิ่งพิเศษ)
 default_exclusions = ["Revision Clouds", "Revision Cloud Tags"]
+
+# สีดำ RGB(0,0,0) ที่จะใช้แทนที่สีดั้งเดิมชั่วคราว (บรรทัด 195-196 ใช้สีนี้)
 black_color = RevitColor(0, 0, 0)
+
+# ชื่อ Printer เริ่มต้น (ถ้าพบในระบบจะเลือกอัตโนมัติ)
 target_printer_name = "PDF24" 
-delay_seconds = 30 # [ตั้งค่า] จำนวนวินาทีที่จะรอให้ PDF Printer ทำงาน (ปรับเพิ่มได้)
 
 # ==========================================
-# 2. เตรียมข้อมูล
+# 2. เตรียมข้อมูล Categories, Printers, Settings
 # ==========================================
+
+# ฟังก์ชัน: เรียงลำดับ String ที่มี Numbers ให้ถูกต้อง (เช่น 2 มาก่อน 10)
+# ใช้ที่: บรรทัด 73, 80, 87 เพื่อเรียงลำดับ categories, printers, settings
 def natural_sort_key(text):
     return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]
 
+# ฟังก์ชัน: แปลงค่า Hex Color เป็น WPF Brush สำหรับ UI
+# ใช้ที่: บรรทัด 127, 153, 239 เพื่อสร้างสี Background ของปุ่ม
 def get_brush(hex_code):
     return SolidColorBrush(ColorConverter.ConvertFromString(hex_code))
 
+# สร้าง Map ของ Category ทั้งหมดใน Document
+# Key = ชื่อ Category หรือ "Parent > Subcategory"
+# Value = Reference ไปยัง Category Object ที่จะเปลี่ยนสี (บรรทัด 195-196, 260)
 item_data_map = {}
 for cat in doc.Settings.Categories:
     try:
-        if ".dwg" in cat.Name.lower(): continue
+        # ข้ามไฟล์ DWG Import
+        if ".dwg" in cat.Name.lower(): 
+            continue
         item_data_map[cat.Name] = cat
+        
+        # เพิ่ม Subcategory ทั้งหมด (เช่น "Line Styles > Hidden Line")
         if cat.SubCategories.Size > 0:
             for subcat in cat.SubCategories:
                 if ".dwg" not in subcat.Name.lower():
                     item_data_map["{}  >  {}".format(cat.Name, subcat.Name)] = subcat
-    except: pass
+    except: 
+        pass
 
+# ดึง List ของ Printer ทั้งหมดจากระบบ
+# ใช้ที่: UI ComboBox (บรรทัด 148)
 printers_list = [p for p in PrinterSettings.InstalledPrinters]
 printers_list.sort(key=natural_sort_key)
 
+# ดึง Print Settings ทั้งหมดจาก Document
+# ใช้ที่: UI ComboBox (บรรทัด 151) และ บรรทัด 231
 print_settings_list = []
 ps_elems = FilteredElementCollector(doc).OfClass(PrintSetting).ToElements()
 for ps in ps_elems:
-    if ps.Name: print_settings_list.append(ps.Name)
+    if ps.Name: 
+        print_settings_list.append(ps.Name)
 print_settings_list.sort(key=natural_sort_key)
 
+# ดึง View/Sheet Set ทั้งหมดจาก Document
+# ใช้ที่: UI ComboBox (บรรทัด 154) และ บรรทัด 235
 view_sets_list = []
 vs_elems = FilteredElementCollector(doc).OfClass(ViewSheetSet).ToElements()
 for vs in vs_elems:
@@ -75,61 +116,115 @@ for vs in vs_elems:
 view_sets_list.sort(key=natural_sort_key)
 
 # ==========================================
-# 3. UI Class
+# 3. UI Class สำหรับการเลือก Categories และ Plot Settings
 # ==========================================
 class FullProcessSelector(Window):
+    """
+    Window UI ที่ให้ผู้ใช้เลือก:
+    - Categories ที่ต้องการ Exclude (ไม่เปลี่ยนสี)
+    - Printer, Print Setting, View/Sheet Set
+    - Output Path สำหรับบันทึกไฟล์
+    - วิธีการเซฟ (Combined หรือ Separate)
+    """
+    
     def __init__(self, item_map, p_list, v_list, printer_list):
-        self.Title = "MTC: Color Manager (Large File Support)"
+        # ตั้งค่าพื้นฐานของ Window
+        self.Title = "Itti Drawing Plot Manager"
         self.Width = 500
         self.Height = 850 
         self.WindowStartupLocation = WindowStartupLocation.CenterScreen
         self.Background = get_brush("#F5F5F5")
         self.Topmost = True
         
+        # เก็บ Reference ของ Categories Map + Excluded Items
+        # item_data_map: ใช้เพื่อ Map จากชื่อ Category ไปยัง Object (บรรทัด 263)
         self.item_map = item_map
         self.sorted_names = sorted(self.item_map.keys(), key=natural_sort_key)
-        self.checkbox_map = {}
-        self.excluded_list = []
+        self.checkbox_map = {}  # Map ของ Checkbox สำหรับแต่ละ Category
+        self.excluded_list = []  # List ของ Category ที่ถูกเลือก Exclude (บรรทัด 267)
 
+        # สร้าง Main Layout
         main_layout = StackPanel()
         main_layout.Margin = Thickness(20)
 
+        # Section 1: ให้ผู้ใช้เลือก Categories ที่ต้องการ Exclude
+        # excluded_list ที่เลือกจะใช้ที่ บรรทัด 195 เพื่อข้ามการเปลี่ยนสี
         main_layout.Children.Add(Label(Content="1. เลือกรายการที่ต้องการ Exclude:", FontWeight=System.Windows.FontWeights.Bold))
         self.search_box = TextBox(Height=25, Margin=Thickness(0, 5, 0, 5))
-        self.search_box.TextChanged += self.on_search_changed
+        self.search_box.TextChanged += self.on_search_changed  # ฟังการพิมพ์ filter
         main_layout.Children.Add(self.search_box)
 
-        self.listbox = ListBox(Height=300)
-        self.refresh_list("")
+        self.listbox = ListBox(Height=200)
+        self.refresh_list("")  # แสดง Categories ทั้งหมด
         main_layout.Children.Add(self.listbox)
 
+        # Section 2: ให้ผู้ใช้เลือก Plot Settings
         main_layout.Children.Add(Label(Content="2. ตั้งค่าการ Plot:", FontWeight=System.Windows.FontWeights.Bold, Margin=Thickness(0,15,0,0)))
         
+        # Printer Selection - ใช้ที่ บรรทัด 227 เพื่อเลือก Driver
         main_layout.Children.Add(TextBlock(Text="เลือก Printer:", Margin=Thickness(5,5,0,0)))
         self.combo_printer = ComboBox(ItemsSource=printer_list, Margin=Thickness(0,2,0,10))
-        if target_printer_name in printer_list: self.combo_printer.SelectedItem = target_printer_name
-        elif printer_list: self.combo_printer.SelectedIndex = 0
+        if target_printer_name in printer_list: 
+            self.combo_printer.SelectedItem = target_printer_name
+        elif printer_list: 
+            self.combo_printer.SelectedIndex = 0
         main_layout.Children.Add(self.combo_printer)
 
+        # Print Setting Selection - ใช้ที่ บรรทัด 231 เพื่อเลือก Print Setting
         main_layout.Children.Add(TextBlock(Text="เลือก Print Setting:", Margin=Thickness(5,5,0,0)))
         self.combo_ps = ComboBox(ItemsSource=p_list, Margin=Thickness(0,2,0,10))
-        if p_list: self.combo_ps.SelectedIndex = 0
+        if p_list: 
+            self.combo_ps.SelectedIndex = 0
         main_layout.Children.Add(self.combo_ps)
 
-        main_layout.Children.Add(TextBlock(Text="เลือก View Set:", Margin=Thickness(5,5,0,0)))
-        self.combo_vs = ComboBox(ItemsSource=v_list, Margin=Thickness(0,2,0,15))
-        if v_list: self.combo_vs.SelectedIndex = 0
+        # View/Sheet Set Selection - ใช้ที่ บรรทัด 235 เพื่อเลือก View/Sheet Set
+        main_layout.Children.Add(TextBlock(Text="เลือก View / Sheet Set:", Margin=Thickness(5,5,0,0)))
+        self.combo_vs = ComboBox(ItemsSource=v_list, Margin=Thickness(0,2,0,10))
+        if v_list: 
+            self.combo_vs.SelectedIndex = 0
         main_layout.Children.Add(self.combo_vs)
 
-        self.cb_do_print = CheckBox(Content="สั่ง Plot ทันที (หน่วงเวลา {} วินาทีเพื่อไฟล์ใหญ่)".format(delay_seconds), IsChecked=True, Margin=Thickness(0,0,0,10))
+        # Section 3: ให้ผู้ใช้เลือกรูปแบบการเซฟไฟล์ - ใช้ที่ บรรทัด 220-221
+        main_layout.Children.Add(TextBlock(Text="รูปแบบการเซฟไฟล์:", FontWeight=System.Windows.FontWeights.Bold, Margin=Thickness(5,0,0,5)))
+        self.rb_combine = RadioButton(Content="Combine views/sheets into a single file", IsChecked=True, Margin=Thickness(5,0,0,5))
+        self.rb_separate = RadioButton(Content="Create separate files", Margin=Thickness(5,0,0,10))
+        main_layout.Children.Add(self.rb_combine)
+        main_layout.Children.Add(self.rb_separate)
+
+        # Section 4: ให้ผู้ใช้ระบุ Output Path - ใช้ที่ บรรทัด 215 เพื่อบันทึกไฟล์
+        main_layout.Children.Add(TextBlock(Text="โฟลเดอร์สำหรับเซฟไฟล์ (Output Path):", Margin=Thickness(5,0,0,2)))
+        path_panel = StackPanel(Orientation=Orientation.Horizontal, Margin=Thickness(0,0,0,15))
+        self.txt_path = TextBox(Width=350, Height=25, Margin=Thickness(5,0,5,0))
+        self.txt_path.Text = r"C:\Temp"  # Path เริ่มต้น
+        
+        btn_browse = Button(Content="Browse...", Width=80, Height=25)
+        btn_browse.Click += self.on_browse  # เปิดหน้าต่าง Browse Folder
+        
+        path_panel.Children.Add(self.txt_path)
+        path_panel.Children.Add(btn_browse)
+        main_layout.Children.Add(path_panel)
+
+        # Section 5: Checkbox เพื่อให้ผู้ใช้เลือกว่าจะ Plot ทันทีหรือไม่ - ใช้ที่ บรรทัด 209
+        self.cb_do_print = CheckBox(Content="สั่ง Plot ทันที (พร้อมระบบเช็คคิวอัจฉริยะ)", IsChecked=True, Margin=Thickness(0,0,0,10))
         main_layout.Children.Add(self.cb_do_print)
 
+        # ปุ่ม RUN สำหรับเริ่มกระบวนการ
         btn_submit = Button(Content="RUN PROCESS", Height=50, Background=get_brush("#212121"), Foreground=get_brush("#FFFFFF"), FontWeight=System.Windows.FontWeights.Bold)
-        btn_submit.Click += self.on_submit
+        btn_submit.Click += self.on_submit  # เรียก on_submit เมื่อกด
         main_layout.Children.Add(btn_submit)
 
         self.Content = main_layout
 
+    # Event Handler: เปิดหน้าต่าง Browse เพื่อเลือกโฟลเดอร์
+    # ผลลัพธ์: ใส่ Path ที่เลือกลงใน txt_path (บรรทัด 254-255)
+    def on_browse(self, sender, e):
+        dialog = FolderBrowserDialog()
+        dialog.Description = u"เลือกโฟลเดอร์สำหรับบันทึกไฟล์ PDF"
+        if dialog.ShowDialog() == DialogResult.OK:
+            self.txt_path.Text = dialog.SelectedPath
+
+    # ฟังก์ชัน: อัปเดต ListBox ให้แสดง Category ที่ตรงกับ Search Text
+    # ใช้ที่: เมื่อผู้ใช้พิมพ์ใน search_box (บรรทัด 240)
     def refresh_list(self, txt):
         self.listbox.Items.Clear()
         search = txt.lower()
@@ -137,30 +232,42 @@ class FullProcessSelector(Window):
             if search in name.lower():
                 if name not in self.checkbox_map:
                     cb = CheckBox(Content=name)
+                    # Mark default exclusions as checked อัตโนมัติ (บรรทัด 43)
                     for d_ex in default_exclusions:
-                        if d_ex == name or d_ex in name.split("  >  "): cb.IsChecked = True
+                        if d_ex == name or d_ex in name.split("  >  "): 
+                            cb.IsChecked = True
                     self.checkbox_map[name] = cb
                 self.listbox.Items.Add(self.checkbox_map[name])
 
-    def on_search_changed(self, sender, e): self.refresh_list(self.search_box.Text)
+    # Event Handler: เมื่อผู้ใช้พิมพ์ใน search_box ให้ filter list
+    def on_search_changed(self, sender, e): 
+        self.refresh_list(self.search_box.Text)
 
+    # Event Handler: เมื่อผู้ใช้กด RUN PROCESS
+    # ผลลัพธ์: สร้าง excluded_list และปิด Window (DialogResult = True)
     def on_submit(self, sender, e):
         for name in self.checkbox_map:
-            if self.checkbox_map[name].IsChecked: self.excluded_list.append(self.item_map[name])
+            if self.checkbox_map[name].IsChecked: 
+                self.excluded_list.append(self.item_map[name])
         self.DialogResult = True
         self.Close()
 
 # ==========================================
-# 4. ประมวลผล
+# 4. ประมวลผลหลัก: Change Color -> Plot -> Restore Color
 # ==========================================
 OUT_MSG = u"UI ถูกยกเลิก"
 
 if is_active:
     try:
+        # 4.1: แสดง UI เพื่อให้ผู้ใช้เลือกการตั้งค่า
         form = FullProcessSelector(item_data_map, print_settings_list, view_sets_list, printers_list)
         if form.ShowDialog():
             
-            # --- [Method 1] Backup & Change to Black (Optimized) ---
+            # 4.2: เปลี่ยนสีทั้งหมดเป็นดำ (ยกเว้น Excluded Items)
+            # ข้อมูลที่ใช้:
+            #   - original_colors: เก็บสีดั้งเดิมไว้ เพื่อคืนค่าในบรรทัด 315
+            #   - form.excluded_list: Categories ที่ผู้ใช้เลือกไม่ให้เปลี่ยนสี (จาก UI)
+            #   - black_color: RGB(0,0,0) ที่ตั้งไว้ที่ บรรทัด 46
             original_colors = {}
             t_black = Transaction(doc, "MTC: Temp Black")
             t_black.Start()
@@ -169,61 +276,115 @@ if is_active:
                 if cat not in form.excluded_list:
                     try:
                         curr = cat.LineColor
+                        # บันทึกสีเดิมก่อนเปลี่ยน (ใช้ที่บรรทัด 315)
                         if curr.Red != 0 or curr.Green != 0 or curr.Blue != 0:
                             original_colors[name] = curr
+                            # เปลี่ยนเป็นดำชั่วคราว
                             cat.LineColor = black_color
-                    except: pass
+                    except: 
+                        pass
             t_black.Commit()
             
-# --- 4.3 Plot ---
+            # 4.3: Plot และรอให้พิมพ์เสร็จ (หากผู้ใช้เลือก)
+            # ข้อมูลที่ใช้:
+            #   - form.cb_do_print.IsChecked: Check Box ที่ให้เลือก Plot หรือไม่
+            #   - form.combo_printer.SelectedItem: Printer ที่เลือก
+            #   - form.txt_path.Text: Output Path สำหรับบันทึกไฟล์
             if form.cb_do_print.IsChecked:
                 try:
                     pm = doc.PrintManager
+                    selected_printer = form.combo_printer.SelectedItem
                     
-                    # 1. เปิด Transaction สำหรับการเปลี่ยนตั้งค่าหน้ากระดาษและเซ็ตปริ้นท์
                     t_print_setup = Transaction(doc, "MTC: Setup Print")
                     t_print_setup.Start()
                     
-                    selected_printer = form.combo_printer.SelectedItem
+                    # เลือก Printer Driver
                     pm.SelectNewPrintDriver(selected_printer)
+                    # ตั้ง Print Range เป็น Selection (ใช้ View/Sheet Set ที่เลือก)
                     pm.PrintRange = pm.PrintRange.Select
                     
-                    # Apply Print Setting
+                    # บังคับใช้ PrintToFile เพื่อให้ Revit ส่ง Path ออกไป
+                    pm.PrintToFile = True 
+                    out_dir = form.txt_path.Text
+                    
+                    # สร้างโฟลเดอร์ output หากไม่มี
+                    if not os.path.exists(out_dir):
+                        os.makedirs(out_dir)
+
+                    try:
+                        # ตั้งค่าการรวมไฟล์ (Combine หรือ Separate)
+                        # form.rb_combine.IsChecked: True = รวมเป็น 1 ไฟล์, False = แยกไฟล์ต่อ Sheet
+                        pm.CombinedFile = form.rb_combine.IsChecked
+                        if form.rb_combine.IsChecked:
+                            # รวมทั้งหมดเป็น 1 ไฟล์
+                            pm.PrintToFileName = os.path.join(out_dir, "Combined_Print.pdf")
+                        else:
+                            # Revit จะเติมชื่อ Sheet ต่อท้ายให้อัตโนมัติ (เช่น Sheet_A0.pdf)
+                            pm.PrintToFileName = os.path.join(out_dir, "Sheet.pdf")
+                    except: 
+                        pass
+                    
+                    # เลือก Print Setting ที่ผู้ใช้เลือกจาก UI
                     for ps in ps_elems:
                         if ps.Name == form.combo_ps.SelectedItem:
                             pm.PrintSetup.CurrentPrintSetting = ps
                             break
-                            
-                    # Apply View Set
+                    
+                    # เลือก View/Sheet Set ที่ผู้ใช้เลือกจาก UI
                     for vs in vs_elems:
                         if vs.Name == form.combo_vs.SelectedItem:
                             pm.ViewSheetSetting.CurrentViewSheetSet = vs
                             break
                             
-                    # ปิด Transaction เพื่อบันทึกการตั้งค่า
                     t_print_setup.Commit()
                     
-                    # 2. สั่งพิมพ์ (ไม่ต้องมี CanPrint)
+                    # ส่งคำสั่ง Plot ไปยัง Printer
                     pm.SubmitPrint()
                     
-                    # 3. หน่วงเวลาให้ Driver ทำงาน (Method 2)
-                    time.sleep(delay_seconds)
-                    
-                    OUT_MSG = u"✅ ส่งคำสั่ง Plot เรียบร้อย (รอ Spooling {} วินาที)".format(delay_seconds)
-                    
+                    # 4.3.1: ระบบเช็คคิว Smart Queue Polling
+                    # วัตถุประสงค์: รอให้พิมพ์เสร็จก่อนที่จะคืนค่าสี
+                    # ดีเมริต: ถ้า Queue ว่าง = พิมพ์เสร็จ, ถ้า Timeout = ยอมแพ้
+                    try:
+                        print_server = LocalPrintServer()
+                        print_queue = print_server.GetPrintQueue(selected_printer)
+                        time.sleep(1)  # รอให้ Job เข้าคิว
+                        timeout_limit = 300  # Timeout 5 นาที
+                        start_time = time.time()
+                        
+                        # Loop: เช็ค Queue จนกว่า Job หมดหรือ Timeout
+                        while True:
+                            print_queue.Refresh()
+                            if print_queue.NumberOfJobs == 0:
+                                OUT_MSG = u"✅ พิมพ์เสร็จสมบูรณ์! ทำการคืนค่าสี..."
+                                break
+                            if (time.time() - start_time) > timeout_limit:
+                                OUT_MSG = u"⚠️ ระบบรอคิวนานเกิน 5 นาที (Timeout) ทำการคืนค่าสี..."
+                                break
+                            time.sleep(1.5)  # เช็ค Queue ทุก 1.5 วินาที
+                            
+                    except Exception as q_err:
+                        # ถ้า Queue Check ล้มเหลว ใช้ Fallback: รอคงที่ 15 วินาที
+                        time.sleep(15) 
+                        OUT_MSG = u"✅ ส่งคำสั่ง Plot สำเร็จ (เช็คคิวไม่ได้ ใช้ Fallback 15s)"
+                        
                 except Exception as pe:
-                    # ถ้า Error ระหว่างตั้งค่า ให้ยกเลิก Transaction ป้องกันโมเดลค้าง
                     OUT_MSG = u"❌ Plot Error: " + str(pe)
 
-            # --- 4.4 Restore Color ---
+            # 4.4: คืนค่าสีดั้งเดิมทั้งหมด
+            # ข้อมูลที่ใช้:
+            #   - original_colors: สีเดิมที่บันทึกไว้ในบรรทัด 306
+            #   - item_data_map: Reference ไปยัง Category Object
             t_restore = Transaction(doc, "MTC: Restore Color")
             t_restore.Start()
             for name in original_colors:
-                try: item_data_map[name].LineColor = original_colors[name]
-                except: pass
+                try: 
+                    item_data_map[name].LineColor = original_colors[name]
+                except: 
+                    pass
             t_restore.Commit()
             
     except Exception as e:
         OUT_MSG = u"❌ Error: " + str(e)
 
+# ส่งผลลัพธ์ออกไป (ไปยัง Dynamo output)
 OUT = OUT_MSG
