@@ -14,3 +14,8 @@
 ### 📂 Project Structure
 * **lib/** : รวบรวม Python Scripts ที่เป็น Template File และ Dynamo Files (.dyn)
 * **tools/** : ไฟล์สำหรับรวมรวบ Script ต่างๆ ที่ใช้กับ Tools
+
+### 🔧 Current Tools
+* **Duct Classification** ระบุชนิดของวัสดุลงสู่ Parameter โดยอัตโนมัติ
+* **Filter Cleaner** จัดการลบ Filter หลายๆชิ้นในโปรเจคได้ในทีเดียว
+* **1clickMonoPrint** Plot Drawing ให้เป็นสีดำโดยยังคง Object หรือ Line Style ที่เลือกให้เป็นสีเหมือนเดิม
