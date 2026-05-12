@@ -1,104 +1,74 @@
 # -*- coding: utf-8 -*-
 """
-Script: MTC Change Object & Line Style Color 1clickplot 
-วัตถุประสงค์: เปลี่ยนสี Object & Line Style เป็นสีดำ แล้ว Plot ไฟล์ PDF ผ่าน Printer ที่เลือก
+Script: MTC Change Object & Line Style Color 1clickplot (Lean Version - Fixed for IronPython 2)
 """
-# บรรทัด 5-6: โหลด CLR (Common Language Runtime) เพื่อใช้งาน .NET framework ใน Python
 import clr
-import sys  # บรรทัด 7: ใช้สำหรับจัดการ system environment
-import System  # บรรทัด 8: ใช้เข้าถึง .NET System namespace
-import re  # บรรทัด 9: ใช้สำหรับ Regular Expression ในการแยก/จัดรูปข้อความ (Line 242: natural_sort_key)
-import os  # บรรทัด 10: ใช้สำหรับจัดการ file/directory path (Line 415, 416)
-import time  # บรรทัด 11: ใช้สำหรับเช็คเวลา Timeout ในการรอคิว Print (Line 418-430)
+import sys
+import System
+import re
+import os
+import time
 
-# บรรทัด 13-15: โหลด Revit Services API เพื่อเข้าถึง Document ปัจจุบันใน Revit
+# Load Revit API
 clr.AddReference('RevitServices')
 from RevitServices.Persistence import DocumentManager
-doc = DocumentManager.Instance.CurrentDBDocument  # บรรทัด 15: ตัวแปร `doc` ใช้ตลอดไฟล์ (Line 50, 227, 388...)
+doc = DocumentManager.Instance.CurrentDBDocument
 
-# บรรทัด 17-18: โหลด Revit DB API เพื่อเข้าถึง Color, Transaction, และ FilteredElementCollector
 clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import Color as RevitColor, Transaction, FilteredElementCollector, ViewSheetSet, PrintSetting
-# RevitColor ใช้ที่ Line 39 (black_color) และ Line 380 (cat.LineColor)
-# Transaction ใช้ที่ Line 377, 398, 433 สำหรับการเปลี่ยนแปลง Revit document
-# FilteredElementCollector ใช้ที่ Line 50, 53, 56 เพื่อค้นหา PrintSetting และ ViewSheetSet
 
-# บรรทัด 20-25: โหลด WPF (Windows Presentation Foundation) components สำหรับสร้าง UI dialog
-clr.AddReference("PresentationFramework")  # บรรทัด 20: Framework หลักของ WPF
-clr.AddReference("PresentationCore")  # บรรทัด 21: Core functionality ของ WPF
-clr.AddReference("System.Xml")  # บรรทัด 22: ใช้สำหรับ XAML parsing (Line 282)
-clr.AddReference("System.Printing")  # บรรทัด 23: ใช้สำหรับ Printer queue management (Line 419)
-clr.AddReference("System.Windows.Forms")  # บรรทัด 24: ใช้สำหรับ FolderBrowserDialog (Line 314)
+# Load WPF & Windows UI components
+clr.AddReference("PresentationFramework")
+clr.AddReference("PresentationCore")
+clr.AddReference("System.Xml")
+clr.AddReference("System.Printing")
+clr.AddReference("System.Windows.Forms")
+clr.AddReference("System.Drawing") # <--- จุดที่เพิ่มกลับเข้ามาแก้ไข Error
 
-# บรรทัด 26-32: Import WPF, System namespaces และ UI components ที่ใช้งาน
-from System.Windows.Markup import XamlReader  # บรรทัด 26: ใช้ parse XAML string (Line 282)
-from System.IO import StringReader  # บรรทัด 27: แปลง XAML string เป็น stream (Line 282)
-from System.Xml import XmlReader  # บรรทัด 28: ใช้ XmlReader สำหรับ XAML parsing (Line 282)
-from System.Windows.Controls import CheckBox  # บรรทัด 29: UI element สำหรับ checkbox (Line 318)
-from System.Drawing.Printing import PrinterSettings  # บรรทัด 30: ใช้เข้าถึง Installed Printers (Line 50)
-from System.Printing import LocalPrintServer  # บรรทัด 31: ใช้สำหรับตรวจสอบ printer queue (Line 419)
-from System.Windows.Forms import FolderBrowserDialog, DialogResult  # บรรทัด 32: UI dialog สำหรับเลือก folder (Line 314)
+from System.Windows.Markup import XamlReader
+from System.IO import StringReader
+from System.Xml import XmlReader
+from System.Windows.Controls import CheckBox
+from System.Drawing.Printing import PrinterSettings
+from System.Printing import LocalPrintServer
+from System.Windows.Forms import FolderBrowserDialog, DialogResult
 
 # ==========================================
-# 1. Config & Initial Setup (บรรทัด 35-39)
+# 1. Config & Initial Setup
 # ==========================================
-# บรรทัด 36: ตรวจสอบว่า input IN[0] เป็น boolean หรือไม่ เพื่อเปิด/ปิด script
 is_active = IN[0] if isinstance(IN[0], bool) else True
-# บรรทัด 37: รายการ categories ที่ต้องการแยกออก (ใช้ที่ Line 319 เพื่อเช็ค checkbox default)
 default_exclusions = ["Revision Clouds", "Revision Cloud Tags"]
-# บรรทัด 38: สร้างตัวแปร RevitColor สีดำ (R=0, G=0, B=0) ใช้ที่ Line 381 เพื่อเปลี่ยนสี
 black_color = RevitColor(0, 0, 0)
-# บรรทัด 39: ชื่อ Printer ที่ต้องการใช้ default (ใช้ที่ Line 290 เพื่อเลือก printer โดยอัตโนมัติ)
 target_printer_name = "PDF24"
 
-# บรรทัด 42-43: ฟังก์ชัน natural_sort_key สำหรับลินห์หมาย (1, 2, 10 แเละชี 1, 2, 3...10 ไม่ใช่ string sort)
-# บรรทัด 43: re.split('[0-9]+', text) ภาคก text เป็น list สรคฬ และ ตัวเลข คนดทินไข
-# ตัวอย่าง: "Part_1_Elev_10" เป็น ['Part_', 1, '_Elev_', 10, '']
 def natural_sort_key(text):
-    # บรรทัด 43: List comprehension เเปลงฬไช่ number เป็น int หรือเป็นน้อย lowercase (Line 50)
     return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]
 
 # ==========================================
-# 2. Data Preparation (List Comprehension) (บรรทัด 47-65)
+# 2. Data Preparation (List Comprehension)
 # ==========================================
-# บรรทัด 49: List comprehension ตัวย่อ Printer ที่ลงทะเบยน แร่ปโหลลฬ (Line 291 ใช้ว่หิด)
 printers_list = sorted([p for p in PrinterSettings.InstalledPrinters], key=natural_sort_key)
 
-# บรรทัด 50: FilteredElementCollector คนหา PrintSetting objects จาก Revit document
 ps_elems = FilteredElementCollector(doc).OfClass(PrintSetting).ToElements()
-# บรรทัด 51: List comprehension คนหาชื่อชั่นเท่านัน (Name) ของ PrintSetting ทั้งหมด (Line 293, 407 ใช้ว่หิด)
 print_settings_list = sorted([ps.Name for ps in ps_elems if ps.Name], key=natural_sort_key)
 
-# บรรทัด 53: FilteredElementCollector คนหา ViewSheetSet objects จาก Revit document
 vs_elems = FilteredElementCollector(doc).OfClass(ViewSheetSet).ToElements()
-# บรรทัด 54: List comprehension คนหาชื่อ Name ของ ViewSheetSet ที่ไม่เริ่มต้น < (คำสั่ง "<" คำ) (Line 294, 409 ใช้ว่หิด)
 view_sets_list = sorted([vs.Name for vs in vs_elems if vs.Name and not vs.Name.startswith("<")], key=natural_sort_key)
 
-# บรรทัด 56: สร้าง dictionary เปล่าจจุ Category object โดยชื่อ
 item_data_map = {}
-# บรรทัด 57: Loop งีผ่ขคนหา Category ทั้งหมด จาก Revit document (Line 320 ใช้เช็ค)
 for cat in doc.Settings.Categories:
-    # บรรทัด 58: Try-except ขำด ต่อในการ loop กื่อจับควร exception ถ้า category ไม่มี property ใน การ access
     try:
-        # บรรทัด 59: ข้าม skip คำต็อหลายใหญ่ที่มี ".dwg" ใน name
         if ".dwg" in cat.Name.lower(): continue
-        # บรรทัด 60: เช็ค category name ตจิ่งสค key และ category object เป็ม value (Line 320 ใช้เช็ค)
         item_data_map[cat.Name] = cat
-        # บรรทัด 61: Loop ใง Subcategories ของ category
         for subcat in cat.SubCategories:
-            # บรรทัด 62: Skip subcategories ที่มี ".dwg" ใน name
             if ".dwg" not in subcat.Name.lower():
-                # บรรทัด 63: เช็ค subcategory แบบ "Parent  >  Child" (Line 320 ใช้ต่อง format)
                 item_data_map["{}  >  {}".format(cat.Name, subcat.Name)] = subcat
-    # บรรทัด 64: Exception handler สำหรับ exception กุนเศษ AttributeError (ฉันดัร .SubCategories property ไม่มี)
     except AttributeError:
-        # บรรทัด 65: Pass เชินตั่ว loop ต่อ ไป
-        pass  # ดักจับเฉพาะไม่มี Property ไม่เหมารวม
+        pass 
 
 # ==========================================
 # 3. UI XAML Definition & Class
 # ==========================================
-# ย้ายการสร้าง UI ทั้งหมดมาเป็น XAML String โค้ดจะสะอาดและแก้ไขง่ายขึ้นมาก
 XAML_UI = """
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Itti Drawing Plot Manager" Width="500" Height="800" Background="#F5F5F5" Topmost="True" WindowStartupLocation="CenterScreen">
@@ -186,7 +156,6 @@ class FullProcessSelector(object):
                 if name not in self.checkbox_map:
                     cb = CheckBox()
                     cb.Content = name
-                    # List comprehension แบบ one-liner สำหรับเช็ค default exclusions
                     if any(d_ex == name or d_ex in name.split("  >  ") for d_ex in default_exclusions):
                         cb.IsChecked = True
                     self.checkbox_map[name] = cb
@@ -195,7 +164,6 @@ class FullProcessSelector(object):
     def on_search_changed(self, sender, e): self.refresh_list(self.txtSearch.Text)
 
     def on_submit(self, sender, e):
-        # List Comprehension สำหรับแปลง Checkbox ที่เลือก เป็น List ของ Category objects
         self.excluded_list = [self.item_map[name] for name, cb in self.checkbox_map.items() if cb.IsChecked]
         self.window.DialogResult = True
         self.window.Close()
@@ -243,7 +211,6 @@ if is_active:
                     filename = "Combined_Print.pdf" if pm.CombinedFile else "Sheet.pdf"
                     pm.PrintToFileName = os.path.join(out_dir, filename)
                     
-                    # ใช้ Python generator next() ดึงค่าโดยไม่ต้องลูป for ช่วยให้โค้ดคลีนขึ้น
                     selected_ps = next((ps for ps in ps_elems if ps.Name == form.cbPrintSetting.SelectedItem), None)
                     if selected_ps: pm.PrintSetup.CurrentPrintSetting = selected_ps
                     
@@ -258,7 +225,7 @@ if is_active:
                         print_server = LocalPrintServer()
                         print_queue = print_server.GetPrintQueue(selected_printer)
                         time.sleep(1)
-                        timeout_limit = 120 # ลดเวลา Timeout เหลือ 2 นาที เพื่อไม่ให้โปรแกรม freeze นานเกินเหตุ
+                        timeout_limit = 120 
                         start_time = time.time()
                         
                         while True:
@@ -272,7 +239,7 @@ if is_active:
                             time.sleep(1)
                             
                     except Exception:
-                        time.sleep(5) # Fallback หดเหลือ 5 วินาที
+                        time.sleep(5) 
                         OUT_MSG = u"✅ ส่งคำสั่ง Plot สำเร็จ (เช็คคิวไม่ได้ ใช้ Fallback 5s)"
                         
                 except Exception as pe: OUT_MSG = u"❌ Plot Error: " + str(pe)
