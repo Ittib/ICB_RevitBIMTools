@@ -41,14 +41,16 @@ for item in items:
         max_dim = max(w, h, d)
         
         # Logic การแบ่งประเภทตามขนาด[cite: 1]
-        if max_dim < 600:
-            val = "Light"
-        elif max_dim < 1300:
-            val = "Medium"
-        elif max_dim < 2300:
-            val = "Heavy"
-        else:
+        if max_dim > 2299:
             val = "Extra Heavy"
+        elif max_dim > 1524:
+            val = "Heavy"
+        elif max_dim > 774:
+            val = "Medium"
+        elif max_dim > 599:
+            val = "Light-Medium"
+        else:
+            val = "Light"
             
         # เขียนค่าลงใน Parameter[cite: 1]
         out_param = item.LookupParameter("Duct Classification")
