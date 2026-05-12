@@ -1,0 +1,431 @@
+# -*- coding: utf-8 -*-
+"""
+Script: MTC Change Object & Line Style Color 1clickplot 
+Purpose: Change Object & Line Style color to black, then Plot to PDF via selected Printer
+"""
+# Line 5: Load CLR to use .NET framework in Python
+import clr
+# Line 7: System environment management
+import sys
+# Line 8: .NET System namespace access
+import System
+# Line 9: Regular Expression for text pattern matching/splitting (used Line 43 in natural_sort_key)
+import re
+# Line 10: File/directory path management (used Line 415, 416)
+import os
+# Line 11: Time checking for print queue timeout (used Line 418-430)
+import time
+
+# ========== REVIT API IMPORTS ==========
+# Line 13-15: Load Revit Services to get current document
+clr.AddReference('RevitServices')
+from RevitServices.Persistence import DocumentManager
+# Line 15: doc variable used throughout (Line 50, 227, 388, 398, 399, 433, 434, 438)
+doc = DocumentManager.Instance.CurrentDBDocument
+
+# Line 17-18: Load Revit DB API for Color, Transaction, FilteredElementCollector
+clr.AddReference('RevitAPI')
+# Import Color class (used Line 39: black_color), Transaction (Line 377, 398, 433),
+# FilteredElementCollector (Line 50, 53, 56), ViewSheetSet (Line 54, 409), PrintSetting (Line 50, 407)
+from Autodesk.Revit.DB import Color as RevitColor, Transaction, FilteredElementCollector, ViewSheetSet, PrintSetting
+
+# ========== WPF & WINDOWS UI IMPORTS ==========
+# Line 20-24: Load WPF assemblies for UI dialog creation
+clr.AddReference("PresentationFramework")  # WPF Framework
+clr.AddReference("PresentationCore")        # WPF Core functionality
+clr.AddReference("System.Xml")              # XAML parsing (Line 282)
+clr.AddReference("System.Printing")         # Printer queue management (Line 419)
+clr.AddReference("System.Windows.Forms")    # FolderBrowserDialog (Line 314)
+
+# Line 26-32: Import specific UI components and helpers
+from System.Windows.Markup import XamlReader            # Parse XAML string (Line 282)
+from System.IO import StringReader                      # Convert XAML to stream (Line 282)
+from System.Xml import XmlReader                        # XML reader for XAML parsing (Line 282)
+from System.Windows.Controls import CheckBox            # Checkbox UI element (Line 318)
+from System.Drawing.Printing import PrinterSettings     # Get installed printers (Line 50)
+from System.Printing import LocalPrintServer            # Check printer queue status (Line 419)
+from System.Windows.Forms import FolderBrowserDialog, DialogResult  # Folder selection dialog (Line 314)
+
+# ========== CONFIGURATION & SETUP ==========
+# Line 36: Check if input is boolean (activate/deactivate script)
+is_active = IN[0] if isinstance(IN[0], bool) else True
+# Line 37: Default categories to exclude from color change (used Line 319 for checkbox default)
+default_exclusions = ["Revision Clouds", "Revision Cloud Tags"]
+# Line 38: Black color object (R=0, G=0, B=0) - used Line 381 to change line colors
+black_color = RevitColor(0, 0, 0)
+# Line 39: Default printer name for auto-selection (used Line 290 in UI setup)
+target_printer_name = "PDF24"
+
+# ========== HELPER FUNCTION: NATURAL SORT ==========
+# Line 42-43: Function for natural sorting (1,2,10 instead of 1,10,2)
+# Example: "Part_1_Elev_10" becomes ['Part_', 1, '_Elev_', 10, '']
+def natural_sort_key(text):
+    # Line 43: Split text by digits, convert digit strings to integers for proper numeric sorting
+    return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]
+
+# ========== DATA PREPARATION ==========
+# Line 49: Get all installed printers sorted naturally (used Line 291 in UI)
+printers_list = sorted([p for p in PrinterSettings.InstalledPrinters], key=natural_sort_key)
+
+# Line 50-51: Get all PrintSetting objects from document and extract names
+ps_elems = FilteredElementCollector(doc).OfClass(PrintSetting).ToElements()
+# Line 51: Extract PrintSetting names - used Line 293, 407 in UI and print process
+print_settings_list = sorted([ps.Name for ps in ps_elems if ps.Name], key=natural_sort_key)
+
+# Line 53-54: Get all ViewSheetSet objects from document
+vs_elems = FilteredElementCollector(doc).OfClass(ViewSheetSet).ToElements()
+# Line 54: Extract ViewSheetSet names (exclude those starting with "<")
+# Used Line 294 in UI and Line 409 for setting print view/sheet
+view_sets_list = sorted([vs.Name for vs in vs_elems if vs.Name and not vs.Name.startswith("<")], key=natural_sort_key)
+
+# Line 56-65: Build dictionary mapping category names to category objects
+# Dictionary structure: {category_name: category_object, "Parent  >  Child": subcategory_object}
+item_data_map = {}
+# Line 57: Loop through all categories in document
+for cat in doc.Settings.Categories:
+    # Line 58: Try-except to handle categories without expected properties
+    try:
+        # Line 59: Skip DWG-related categories (they don't have SubCategories)
+        if ".dwg" in cat.Name.lower(): continue
+        # Line 60: Add main category to map (used Line 320 for checkbox creation)
+        item_data_map[cat.Name] = cat
+        # Line 61: Loop through subcategories of this category
+        for subcat in cat.SubCategories:
+            # Line 62: Skip DWG subcategories
+            if ".dwg" not in subcat.Name.lower():
+                # Line 63: Add subcategory to map with "Parent  >  Child" naming format
+                item_data_map["{}  >  {}".format(cat.Name, subcat.Name)] = subcat
+    # Line 64: Catch AttributeError when category doesn't have SubCategories property
+    except AttributeError:
+        # Line 65: Continue to next category
+        pass
+
+# ========== UI XAML DEFINITION ==========
+# Line 68-99: Define UI layout in XAML string (loaded at Line 282 via XamlReader)
+XAML_UI = """
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Itti Drawing Plot Manager" Width="500" Height="800" Background="#F5F5F5" Topmost="True" WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="20">
+        <!-- Section 1: Category Selection -->
+        <Label Content="1. Select items to Exclude:" FontWeight="Bold"/>
+        <TextBox Name="txtSearch" Height="25" Margin="0,5,0,5"/>          <!-- Search box (Line 316) -->
+        <ListBox Name="lbCategories" Height="200"/>                        <!-- Checkbox list (Line 317) -->
+        
+        <!-- Section 2: Plot Settings -->
+        <Label Content="2. Configure Plot Settings:" FontWeight="Bold" Margin="0,15,0,0"/>
+        <TextBlock Text="Select Printer:" Margin="5,5,0,0"/>
+        <ComboBox Name="cbPrinter" Margin="0,2,0,10"/>                     <!-- Printer selection (Line 325) -->
+        <TextBlock Text="Select Print Setting:" Margin="5,5,0,0"/>
+        <ComboBox Name="cbPrintSetting" Margin="0,2,0,10"/>                <!-- Print setting (Line 326) -->
+        <TextBlock Text="Select View / Sheet Set:" Margin="5,5,0,0"/>
+        <ComboBox Name="cbViewSet" Margin="0,2,0,10"/>                     <!-- View/Sheet set (Line 327) -->
+        
+        <!-- File Format Options -->
+        <TextBlock Text="File Format:" FontWeight="Bold" Margin="5,0,0,5"/>
+        <RadioButton Name="rbCombine" Content="Combine views/sheets into one file" IsChecked="True" Margin="5,0,0,5"/>  <!-- Line 328 -->
+        <RadioButton Name="rbSeparate" Content="Create separate files" Margin="5,0,0,10"/>                              <!-- Line 329 -->
+        
+        <!-- Output Folder Selection -->
+        <TextBlock Text="Output Folder (for PDF files):" Margin="5,0,0,2"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBox Name="txtPath" Width="350" Height="25" Margin="5,0,5,0" Text="C:\Temp"/>  <!-- Output path (Line 330) -->
+            <Button Name="btnBrowse" Content="Browse..." Width="80" Height="25"/>              <!-- Folder browse button (Line 331) -->
+        </StackPanel>
+        
+        <!-- Auto Print Checkbox -->
+        <CheckBox Name="chkDoPrint" Content="Execute Plot immediately (with smart queue check)" IsChecked="True" Margin="0,0,0,10"/>  <!-- Line 332 -->
+        
+        <!-- Run Button -->
+        <Button Name="btnRun" Content="RUN PROCESS" Height="50" Background="#212121" Foreground="#FFFFFF" FontWeight="Bold"/>  <!-- Line 333 -->
+    </StackPanel>
+</Window>
+"""
+
+# ========== UI CLASS DEFINITION ==========
+# Line 101-175: FullProcessSelector class - manages UI dialog and user interactions
+class FullProcessSelector(object):
+    # Line 102-104: Constructor - initialize UI and bind events
+    def __init__(self, item_map, p_list, v_list, printer_list):
+        # Line 102: Store reference to category map (used throughout class)
+        self.item_map = item_map
+        # Line 103: Create sorted list of category names (used Line 320 for checkbox creation)
+        self.sorted_names = sorted(self.item_map.keys(), key=natural_sort_key)
+        # Line 104: Dictionary to store checkbox objects by name (used Line 319, 358)
+        self.checkbox_map = {}
+        # Line 105: List to store selected exclusions (used Line 357 in on_submit)
+        self.excluded_list = []
+        
+        # Line 107: Load XAML string and create window object (uses XamlReader, XmlReader, StringReader from Line 26-28)
+        self.window = XamlReader.Load(XmlReader.Create(StringReader(XAML_UI)))
+        
+        # ========== CONTROL BINDING ==========
+        # Line 109-118: Bind UI controls by name from XAML to Python variables (used Line 282 XamlReader.Load)
+        # Line 110: Search textbox (connected to Line 316 on_search_changed event)
+        self.txtSearch = self.window.FindName("txtSearch")
+        # Line 111: Categories listbox (updated Line 320 in refresh_list)
+        self.lbCategories = self.window.FindName("lbCategories")
+        # Line 112: Printer dropdown (populated Line 291 with printers_list)
+        self.cbPrinter = self.window.FindName("cbPrinter")
+        # Line 113: Print setting dropdown (populated Line 293 with print_settings_list)
+        self.cbPrintSetting = self.window.FindName("cbPrintSetting")
+        # Line 114: View/Sheet set dropdown (populated Line 294 with view_sets_list)
+        self.cbViewSet = self.window.FindName("cbViewSet")
+        # Line 115: Combine files radio button (checked Line 404 for file combining decision)
+        self.rbCombine = self.window.FindName("rbCombine")
+        # Line 116: Output path textbox (used Line 415 to get output directory)
+        self.txtPath = self.window.FindName("txtPath")
+        # Line 117: Browse folder button (event handler Line 314 on_browse)
+        self.btnBrowse = self.window.FindName("btnBrowse")
+        # Line 118: Auto-print checkbox (checked Line 389 for print decision)
+        self.chkDoPrint = self.window.FindName("chkDoPrint")
+        # Line 119: Main RUN button (event handler Line 335 on_submit)
+        self.btnRun = self.window.FindName("btnRun")
+        
+        # ========== POPULATE CONTROLS ==========
+        # Line 121-127: Set data and default selections for combo boxes
+        # Line 121: Set printer list as dropdown items
+        self.cbPrinter.ItemsSource = printer_list
+        # Line 122: Try to select default printer (PDF24) if available (Line 39: target_printer_name)
+        if target_printer_name in printer_list: self.cbPrinter.SelectedItem = target_printer_name
+        # Line 123: Otherwise select first printer if list not empty
+        elif printer_list: self.cbPrinter.SelectedIndex = 0
+        
+        # Line 125: Set print settings list
+        self.cbPrintSetting.ItemsSource = p_list
+        # Line 126: Select first item if available
+        if p_list: self.cbPrintSetting.SelectedIndex = 0
+        
+        # Line 128: Set view/sheet sets list
+        self.cbViewSet.ItemsSource = v_list
+        # Line 129: Select first item if available
+        if v_list: self.cbViewSet.SelectedIndex = 0
+        
+        # Line 131: Populate category checkbox list (calls refresh_list method Line 314)
+        self.refresh_list("")
+        
+        # ========== EVENT HANDLERS ==========
+        # Line 133-135: Connect UI events to handler methods
+        # Line 133: Search textbox text change event -> refresh_list method
+        self.txtSearch.TextChanged += self.on_search_changed
+        # Line 134: Browse button click event -> on_browse method
+        self.btnBrowse.Click += self.on_browse
+        # Line 135: RUN button click event -> on_submit method
+        self.btnRun.Click += self.on_submit
+        
+    # Line 137: Show dialog and return result (True if OK, False if cancelled)
+    def ShowDialog(self): 
+        return self.window.ShowDialog()
+        
+    # ========== EVENT HANDLERS ==========
+    # Line 140-142: Browse folder button handler
+    def on_browse(self, sender, e):
+        # Line 141: Create folder browser dialog
+        dialog = FolderBrowserDialog()
+        # Line 142: Set dialog description
+        dialog.Description = u"Select folder to save PDF files"
+        # Line 143: If user clicks OK, update txtPath with selected folder
+        if dialog.ShowDialog() == DialogResult.OK: self.txtPath.Text = dialog.SelectedPath
+
+    # ========== LIST REFRESH ==========
+    # Line 145-155: Refresh category list based on search text
+    def refresh_list(self, txt):
+        # Line 146: Clear current list items
+        self.lbCategories.Items.Clear()
+        # Line 147: Convert search text to lowercase for comparison
+        search = txt.lower()
+        # Line 148: Loop through all category names (created Line 103 from item_data_map)
+        for name in self.sorted_names:
+            # Line 149: Check if search text appears in category name (case-insensitive)
+            if search in name.lower():
+                # Line 150: If checkbox doesn't exist for this category, create it
+                if name not in self.checkbox_map:
+                    # Line 151: Create new CheckBox control
+                    cb = CheckBox()
+                    # Line 152: Set checkbox label to category name
+                    cb.Content = name
+                    # Line 153-154: Check if category is in default_exclusions (Line 37)
+                    # If so, mark checkbox as checked (default exclusion)
+                    if any(d_ex == name or d_ex in name.split("  >  ") for d_ex in default_exclusions):
+                        cb.IsChecked = True
+                    # Line 155: Store checkbox in dictionary for later retrieval (used Line 357, 358)
+                    self.checkbox_map[name] = cb
+                # Line 156: Add checkbox to list display
+                self.lbCategories.Items.Add(self.checkbox_map[name])
+
+    # Line 158: Search text change event handler (triggered Line 133 TextChanged)
+    def on_search_changed(self, sender, e): 
+        # Line 158: Re-populate list with filtered results based on new search text
+        self.refresh_list(self.txtSearch.Text)
+
+    # ========== SUBMIT HANDLER ==========
+    # Line 160-165: RUN button handler - collect selected exclusions and close dialog
+    def on_submit(self, sender, e):
+        # Line 161-162: List comprehension to collect all checked categories
+        # For each checkbox that is checked, include its corresponding category object from item_map
+        self.excluded_list = [self.item_map[name] for name, cb in self.checkbox_map.items() if cb.IsChecked]
+        # Line 163: Set dialog result to indicate OK (used Line 336 for dialog result check)
+        self.window.DialogResult = True
+        # Line 164: Close the window
+        self.window.Close()
+
+# ========== MAIN PROCESS LOGIC ==========
+# Line 168: Initialize output message
+OUT_MSG = u"UI was cancelled"
+
+# Line 170: Check if script is active (set Line 36)
+if is_active:
+    # Line 171: Try-except for main process error handling
+    try:
+        # Line 172: Create UI form instance with prepared data
+        # Parameters: item_data_map (Line 56-65), print_settings_list (Line 51), 
+        # view_sets_list (Line 54), printers_list (Line 49)
+        form = FullProcessSelector(item_data_map, print_settings_list, view_sets_list, printers_list)
+        # Line 173: Show dialog and wait for user confirmation (ShowDialog returns True if OK clicked)
+        if form.ShowDialog():
+            
+            # ========== CHANGE COLOR TO BLACK ==========
+            # Line 176: Dictionary to store original colors for later restoration (used Line 433 to restore)
+            original_colors = {}
+            # Line 177: Create Revit transaction for temporary black color change
+            t_black = Transaction(doc, "MTC: Temp Black")
+            # Line 178: Start transaction
+            t_black.Start()
+            # Line 179: Loop through all categories in item_data_map (Line 56-65)
+            for name, cat in item_data_map.items():
+                # Line 180: If category is NOT in excluded list (form.excluded_list from Line 357)
+                if cat not in form.excluded_list:
+                    # Line 181: Try-except for categories that might not have LineColor property
+                    try:
+                        # Line 182: Get current line color of category
+                        curr = cat.LineColor
+                        # Line 183: Check if color is not already black (RGB: 0,0,0)
+                        if curr.Red != 0 or curr.Green != 0 or curr.Blue != 0:
+                            # Line 184: Store original color in dictionary for restoration (used Line 433)
+                            original_colors[name] = curr
+                            # Line 185: Change line color to black (created Line 39: black_color)
+                            cat.LineColor = black_color
+                    # Line 186: Catch if LineColor property doesn't exist
+                    except AttributeError: pass
+            # Line 187: Commit transaction (save changes to Revit document)
+            t_black.Commit()
+            
+            # ========== PRINT PROCESS ==========
+            # Line 190: Check if auto-print is enabled (chkDoPrint checkbox from Line 332)
+            if form.chkDoPrint.IsChecked:
+                # Line 191: Try-except for print process error handling
+                try:
+                    # Line 192: Get PrintManager from document
+                    pm = doc.PrintManager
+                    # Line 193: Get selected printer from dropdown (cbPrinter from Line 325)
+                    selected_printer = form.cbPrinter.SelectedItem
+                    
+                    # Line 195: Create transaction for print setup
+                    t_print = Transaction(doc, "MTC: Setup Print")
+                    # Line 196: Start transaction
+                    t_print.Start()
+                    
+                    # Line 198: Select the printer driver
+                    pm.SelectNewPrintDriver(selected_printer)
+                    # Line 199: Set print range to selected items/sheets
+                    pm.PrintRange = pm.PrintRange.Select
+                    # Line 200: Enable print to file (PDF)
+                    pm.PrintToFile = True
+                    # Line 201: Get output directory from txtPath textbox (Line 330, 314 on_browse)
+                    out_dir = form.txtPath.Text
+                    # Line 202: Create output directory if it doesn't exist
+                    if not os.path.exists(out_dir): os.makedirs(out_dir)
+
+                    # Line 204: Check if "Combine" radio button is selected (rbCombine Line 328)
+                    pm.CombinedFile = form.rbCombine.IsChecked
+                    # Line 205: Set filename based on combine setting
+                    filename = "Combined_Print.pdf" if pm.CombinedFile else "Sheet.pdf"
+                    # Line 206: Set full output file path
+                    pm.PrintToFileName = os.path.join(out_dir, filename)
+                    
+                    # ========== SET PRINT SETTINGS ==========
+                    # Line 209: Use Python generator next() to find selected PrintSetting object
+                    # (More efficient than loop, returns first match or None)
+                    # ps_elems contains all PrintSetting objects (Line 50)
+                    selected_ps = next((ps for ps in ps_elems if ps.Name == form.cbPrintSetting.SelectedItem), None)
+                    # Line 210: If PrintSetting found, set it as current
+                    if selected_ps: pm.PrintSetup.CurrentPrintSetting = selected_ps
+                    
+                    # Line 212: Use generator next() to find selected ViewSheetSet object
+                    # vs_elems contains all ViewSheetSet objects (Line 53)
+                    selected_vs = next((vs for vs in vs_elems if vs.Name == form.cbViewSet.SelectedItem), None)
+                    # Line 213: If ViewSheetSet found, set it as current
+                    if selected_vs: pm.ViewSheetSetting.CurrentViewSheetSet = selected_vs
+                            
+                    # Line 215: Commit print setup transaction
+                    t_print.Commit()
+                    # Line 216: Submit print job to printer
+                    pm.SubmitPrint()
+                    
+                    # ========== SMART QUEUE POLLING ==========
+                    # Line 219: Try-except for printer queue checking
+                    try:
+                        # Line 220: Connect to local print server
+                        print_server = LocalPrintServer()
+                        # Line 221: Get print queue for selected printer
+                        print_queue = print_server.GetPrintQueue(selected_printer)
+                        # Line 222: Wait 1 second for job to reach queue
+                        time.sleep(1)
+                        # Line 223: Set 2-minute timeout to avoid program freeze
+                        timeout_limit = 120
+                        # Line 224: Record start time for timeout check
+                        start_time = time.time()
+                        
+                        # Line 226: Loop until print queue is empty or timeout
+                        while True:
+                            # Line 227: Refresh queue status from printer
+                            print_queue.Refresh()
+                            # Line 228: Check if queue is empty (print completed)
+                            if print_queue.NumberOfJobs == 0:
+                                # Line 229: Update status message
+                                OUT_MSG = u"Completed! Restoring colors..."
+                                # Line 230: Exit loop
+                                break
+                            # Line 231: Check if timeout exceeded
+                            if (time.time() - start_time) > timeout_limit:
+                                # Line 232: Update status message with timeout warning
+                                OUT_MSG = u"Queue check timeout (2 min) - restoring colors..."
+                                # Line 233: Exit loop
+                                break
+                            # Line 234: Wait 1 second before checking again
+                            time.sleep(1)
+                            
+                    # Line 236: If queue check fails, use fallback delay
+                    except Exception:
+                        # Line 237: Wait 5 seconds as fallback
+                        time.sleep(5)
+                        # Line 238: Update status message
+                        OUT_MSG = u"Plot submitted (queue check failed, using 5s fallback)"
+                        
+                # Line 240: Catch print process exceptions
+                except Exception as pe: 
+                    # Line 240: Update message with error details
+                    OUT_MSG = u"Print Error: " + str(pe)
+
+            # ========== RESTORE ORIGINAL COLORS ==========
+            # Line 243: Create transaction to restore colors
+            t_restore = Transaction(doc, "MTC: Restore Color")
+            # Line 244: Start transaction
+            t_restore.Start()
+            # Line 245: Loop through stored original colors (created Line 184 in color change)
+            for name, color in original_colors.items():
+                # Line 246: Try-except for color restoration
+                try: 
+                    # Line 246: Restore original color from stored value
+                    item_data_map[name].LineColor = color
+                # Line 247: Ignore errors if color restoration fails
+                except Exception: pass
+            # Line 248: Commit restoration transaction
+            t_restore.Commit()
+            
+    # Line 250: Catch any main process exceptions
+    except Exception as e:
+        # Line 251: Update message with error details
+        OUT_MSG = u"Error: " + str(e)
+
+# Line 253: Return output message to Dynamo
+OUT = OUT_MSG
