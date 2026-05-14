@@ -6,6 +6,7 @@ from System.IO import File
 
 local_path = r"R:\05_MTC_Library Development\MTC R24\00_BIM_Tools_Library\02_Dynamo_Scripts\ICB\Python Script Demo\MTC_ChangeObject&LineStyleColor_1click.py"
 
+#ทำตัวแปรให้เป็น List ว่าง
 script_content = ""
 source_info = ""
 
