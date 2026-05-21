@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "4uL679SRUeQ=",
+  "success": true,
+  "projectFilePath": "D:\\itti\\mtc\\python\\projects\\NwdHtmlImportApp\\NwdHtmlImportApp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ittichai.b\\.nuget\\packages\\htmlagilitypack\\1.12.4\\htmlagilitypack.1.12.4.nupkg.sha512",
+    "C:\\Users\\ittichai.b\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.27\\microsoft.net.illink.tasks.8.0.27.nupkg.sha512"
+  ],
+  "logs": []
+}
