@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>MTC 1ClickPlot Pro</Name>
+    <Assembly>MTC_1ClickPlot.dll</Assembly>
+    <AddInId>12345678-ABCD-1234-ABCD-1234567890AB</AddInId>
+    <FullClassName>MTC_1ClickPlot.App</FullClassName>
+    <VendorId>ITTI</VendorId>
+    <VendorDescription>Itti MTC</VendorDescription>
+  </AddIn>
+</RevitAddIns>

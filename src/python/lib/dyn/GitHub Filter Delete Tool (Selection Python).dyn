@@ -1,0 +1,432 @@
+{
+  "Uuid": "b25e64f1-b0bd-4b47-b576-e1ce9e7f852d",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "GitHub Filter Delete Tool (Selection Python)",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementTypes, DSRevitNodesUI",
+      "SelectedIndex": 143,
+      "SelectedString": "FilterElement",
+      "Id": "dff93f612759469e8ff1583cb204747b",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "441146a5cddf4b5a8443b70377e10648",
+          "Name": "Classes",
+          "Description": "The selected Classes",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All element subclasses."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfType, DSRevitNodesUI",
+      "Id": "35e86f317cfd4559a44e6cc50dae2b28",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "8965fcd3a1be412ab5454a7df64b93f4",
+          "Name": "element class",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "dd2d6c734ac5428d8d1f48d3bbcbbfaf",
+          "Name": "elements",
+          "Description": "All elements in the active document of a given class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All elements in the active document of a given class."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "Id": "5f50b79fe32c4acfab3135ca985b1c34",
+      "NodeType": "BooleanInputNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "f47b23932f8843b3bcf48f58f71b938d",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Enables selection between True and False",
+      "InputValue": true
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 200.0,
+      "WatchHeight": 38.0,
+      "Id": "1b14ed136fa142299bb0787117d1fc10",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "49d9fe32d5984f9c9efc4ca7159f012f",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "3fdeb6a62244441caee670f7ea97fed5",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 200.0,
+      "WatchHeight": 200.0,
+      "Id": "81d30489a0264138b29062f3a93b3db1",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "aeddd7ae78ef4071a248a66370c73503",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "710c86eb5d1a451291c4e6565884c026",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "7cc87302195a4194af50566d7a350d28",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "7473bc4dd15f4668a0e2e8baa6ed905e",
+          "Name": "element",
+          "Description": "The element to delete.\n\nElement",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "cc898739d324429b8801f1f6e5a2471e",
+          "Name": "int[]",
+          "Description": "The list of element id's deleted, including any dependent elements.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "Revit.Elements.Element.Delete@Revit.Elements.Element",
+      "Replication": "Auto",
+      "Description": "Delete the element and any elements that are totally dependent upon the element.\n\nElement.Delete (element: Element): int[]"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\nimport time\r\nimport os\r\n\r\n# นำเข้าไลบรารีของ .NET สำหรับจัดการ HTTP Request และ File\r\nclr.AddReference('System')\r\nfrom System.Net import WebClient, ServicePointManager, SecurityProtocolType\r\nfrom System.Text import Encoding\r\nfrom System.IO import File\r\n\r\n# --- บังคับให้ใช้ TLS 1.2 --- \r\nServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12\r\n\r\n# --- [SETTING] Path ต่างๆ ---\r\ntoken_file_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\01_Python-Scripts\\02_Git Code Importer\\00_Data\\ICB_Note.txt\"\r\nurl = \"https://raw.githubusercontent.com/Ittib/ICB_RevitBIMTools/refs/heads/main/tools/FilterCleaner/MTC_Filter%20Cleaner%20Tools.py\"\r\nlocal_fallback_path = r\"R:\\05_MTC_Library Development\\MTC R24\\00_BIM_Tools_Library\\02_Dynamo_Scripts\\ICB\\Python Script Demo\\MTC_Filter Cleaner Tools.py\"\r\n\r\ndef get_token(path):\r\n    try:\r\n        with open(path, 'r') as f:\r\n            return f.read().strip()\r\n    except:\r\n        return None\r\n\r\nscript_content = \"\"\r\nsource_info = \"\"\r\n\r\n# --- เริ่มการดึงโค้ด ---\r\ntry:\r\n    token = get_token(token_file_path)\r\n    if not token:\r\n        raise Exception(\"Token file not found or cannot be read.\")\r\n\r\n    req_url = url + \"?t=\" + str(int(time.time()))\r\n\r\n    client = WebClient()\r\n    client.Headers.Add('Authorization', 'token %s' % token)\r\n    client.Encoding = Encoding.UTF8\r\n\r\n    script_content = client.DownloadString(req_url)\r\n    source_info = \"🌐 Loaded from GitHub\"\r\n\r\nexcept Exception as e:\r\n    if os.path.exists(local_fallback_path):\r\n        try:\r\n            script_content = File.ReadAllText(local_fallback_path, Encoding.UTF8)\r\n            source_info = \"⚠️ Loaded from Local Fallback\"\r\n        except Exception as read_e:\r\n            script_content = \"\"\r\n            OUT = \"❌ Error reading Local file: \" + str(read_e)\r\n    else:\r\n        script_content = \"\"\r\n        OUT = \"❌ Error fetching GitHub & No Local file: \" + str(e)\r\n\r\n# --- รันโค้ดที่ดึงมาได้ ---\r\nif script_content:\r\n    try:\r\n        script_content = script_content.replace(\"\\r\\n\", \"\\n\")\r\n        \r\n        # รันใน globals() เพื่อให้โค้ดที่ดึงมามองเห็นตัวแปร IN \r\n        # และให้ตัวแปร OUT จากโค้ด UI ถูกส่งกลับออกไปที่ Dynamo ได้โดยตรง\r\n        exec(script_content, globals())\r\n\r\n    except Exception as run_e:\r\n        # หากโค้ดดึงมาได้แต่รันพัง (เช่น จัดหน้าต่างผิด, หาโมดูลไม่เจอ) จะแสดงให้เห็นตรงนี้\r\n        OUT = \"❌ Execution Error (รันโค้ดพัง): \" + str(run_e)",
+      "Engine": "IronPython2",
+      "EngineName": "IronPython2",
+      "VariableInputPorts": true,
+      "Id": "8baf8b22eb964dab9be86363c4aa8bb3",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "626d4e2f90624d0086a2df8f9c0a015e",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "a531e63e675247078adeac6002cbe611",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "7917b141006e4046ac1309ae903d93b6",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\nimport sys\r\nimport System\r\nimport re \r\n\r\nclr.AddReference(\"PresentationFramework\")\r\nclr.AddReference(\"PresentationCore\")\r\nclr.AddReference(\"WindowsBase\")\r\n\r\nfrom System.Windows import Window, Thickness, WindowStartupLocation\r\nfrom System.Windows.Controls import Label, Button, StackPanel, ListBox, SelectionMode, Orientation, TextBox, CheckBox\r\nfrom System.Windows.Media import SolidColorBrush, Color, ColorConverter\r\n\r\n# --- 1. รับค่าจาก Inputs ---\r\ninput_data = IN[0] if isinstance(IN[0], list) else [IN[0]]\r\nis_active = IN[1]\r\n\r\n# --- 2. ฟังก์ชันช่วยเรียงลำดับแบบธรรมชาติ (Natural Sort) ---\r\ndef natural_sort_key(text):\r\n    return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]\r\n\r\ndef get_brush(hex_code):\r\n    return SolidColorBrush(ColorConverter.ConvertFromString(hex_code))\r\n\r\n# --- 3. UI Class ---\r\nclass ProElementSelector(Window):\r\n    def __init__(self, items):\r\n        self.Title = \"Element Delete Selector\"\r\n        self.Width = 450\r\n        self.Height = 750\r\n        self.WindowStartupLocation = WindowStartupLocation.CenterScreen\r\n        self.Background = get_brush(\"#F5F5F5\")\r\n        self.Topmost = True\r\n        \r\n        self.item_map = {}\r\n        for item in items:\r\n            try:\r\n                name = item.Name if hasattr(item, \"Name\") else str(item)\r\n                \r\n                # [แก้ไข] เพิ่ม ID เข้าไปในชื่อ เพื่อป้องกันกรณี Element ชื่อเหมือนกันโดนทับใน Dictionary\r\n                if hasattr(item, \"Id\"):\r\n                    name = \"{} [{}]\".format(name, item.Id)\r\n                \r\n                # เลี่ยงชื่อซ้ำเผื่อกรณีไม่มี ID\r\n                original_name = name\r\n                counter = 1\r\n                while name in self.item_map:\r\n                    name = \"{} ({})\".format(original_name, counter)\r\n                    counter += 1\r\n\r\n                self.item_map[name] = item\r\n            except:\r\n                continue\r\n        \r\n        # ใช้ Natural Sort ในการจัดเรียงรายชื่อ\r\n        self.sorted_names = sorted(self.item_map.keys(), key=natural_sort_key)\r\n        self.checkbox_map = {} \r\n        self.final_output_list = []\r\n\r\n        main_layout = StackPanel()\r\n        main_layout.Margin = Thickness(20)\r\n\r\n        header = Label()\r\n        header.Content = \"เลือกรายการที่ต้องการลบ (เรียงลำดับใหม่)\"\r\n        header.FontSize = 16\r\n        header.FontWeight = System.Windows.FontWeights.Bold\r\n        main_layout.Children.Add(header)\r\n\r\n        self.search_box = TextBox()\r\n        self.search_box.Height = 25\r\n        self.search_box.Margin = Thickness(0, 10, 0, 10)\r\n        self.search_box.TextChanged += self.on_search_changed\r\n        main_layout.Children.Add(self.search_box)\r\n\r\n        btn_row = StackPanel()\r\n        btn_row.Orientation = Orientation.Horizontal\r\n        btn_row.Margin = Thickness(0, 0, 0, 10)\r\n\r\n        btn_all = Button()\r\n        btn_all.Content = \"Select All\"\r\n        btn_all.Width = 100\r\n        btn_all.Click += self.mass_all\r\n\r\n        btn_none = Button()\r\n        btn_none.Content = \"Select None\"\r\n        btn_none.Width = 100\r\n        btn_none.Margin = Thickness(10, 0, 0, 0)\r\n        btn_none.Click += self.mass_none\r\n\r\n        btn_row.Children.Add(btn_all)\r\n        btn_row.Children.Add(btn_none)\r\n        main_layout.Children.Add(btn_row)\r\n\r\n        self.listbox = ListBox()\r\n        self.listbox.Height = 350\r\n        self.listbox.SelectionMode = SelectionMode.Extended\r\n        self.listbox.Background = get_brush(\"#FFFFFF\")\r\n        \r\n        self.refresh_list(\"\")\r\n        main_layout.Children.Add(self.listbox)\r\n\r\n        btn_submit = Button()\r\n        btn_submit.Content = \"CONFIRM DELETE (OUT TO LIST)\"\r\n        btn_submit.Height = 50\r\n        btn_submit.Background = get_brush(\"#EC407A\")\r\n        btn_submit.Foreground = get_brush(\"#FFFFFF\")\r\n        btn_submit.Margin = Thickness(0, 15, 0, 0)\r\n        btn_submit.Click += self.on_submit\r\n        main_layout.Children.Add(btn_submit)\r\n\r\n        self.Content = main_layout\r\n\r\n    def refresh_list(self, txt):\r\n        self.listbox.Items.Clear()\r\n        search = txt.lower()\r\n        for name in self.sorted_names:\r\n            if search in name.lower():\r\n                if name not in self.checkbox_map:\r\n                    cb = CheckBox()\r\n                    cb.Content = name\r\n                    cb.Click += self.sync_checks\r\n                    self.checkbox_map[name] = cb\r\n                self.listbox.Items.Add(self.checkbox_map[name])\r\n\r\n    def sync_checks(self, sender, e):\r\n        state = sender.IsChecked\r\n        if sender in self.listbox.SelectedItems:\r\n            for item in self.listbox.SelectedItems:\r\n                if isinstance(item, CheckBox):\r\n                    item.IsChecked = state\r\n\r\n    def on_search_changed(self, sender, e):\r\n        self.refresh_list(self.search_box.Text)\r\n\r\n    def mass_all(self, s, e):\r\n        for name in self.checkbox_map:\r\n            self.checkbox_map[name].IsChecked = True\r\n\r\n    def mass_none(self, s, e):\r\n        for name in self.checkbox_map:\r\n            self.checkbox_map[name].IsChecked = False\r\n\r\n    def on_submit(self, s, e):\r\n        for name, cb in self.checkbox_map.items():\r\n            if cb.IsChecked:\r\n                self.final_output_list.append(self.item_map[name])\r\n        self.DialogResult = True\r\n        self.Close()\r\n\r\n# --- 4. การรัน ---\r\noutput_to_dynamo = []\r\n\r\nif is_active:\r\n    try:\r\n        form = ProElementSelector(input_data)\r\n        if form.ShowDialog():\r\n            output_to_dynamo = form.final_output_list\r\n        else:\r\n            # [แก้ไข] เปลี่ยนจาก String เป็นลิสต์ว่าง\r\n            output_to_dynamo = [] \r\n    except Exception as e:\r\n        # [แก้ไข] ถ้าเกิด Error ให้พ่นลิสต์ว่าง จะได้ไม่ไปทำให้โหนด Delete พังซ้ำซ้อน\r\n        output_to_dynamo = [] \r\nelse:\r\n    # [แก้ไข] เปลี่ยนจาก \"UI is waiting\" เป็นลิสต์ว่าง\r\n    output_to_dynamo = []\r\n\r\nOUT = output_to_dynamo",
+      "Engine": "IronPython2",
+      "EngineName": "IronPython2",
+      "VariableInputPorts": true,
+      "Id": "15c87601561e4783ad4f241fcaeca300",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "af3b93b7db4c4b25b3b4f233e0d52849",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "c9dde8f39be54d8bbe122d480d0c3986",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "d28d4528d3494505a3ee6b544a8373ed",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "441146a5cddf4b5a8443b70377e10648",
+      "End": "8965fcd3a1be412ab5454a7df64b93f4",
+      "Id": "075667e3cdfe41eb908b3b5961ac3476",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "dd2d6c734ac5428d8d1f48d3bbcbbfaf",
+      "End": "aeddd7ae78ef4071a248a66370c73503",
+      "Id": "525a091704374cbfb2bc8bdf9329da0a",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "dd2d6c734ac5428d8d1f48d3bbcbbfaf",
+      "End": "626d4e2f90624d0086a2df8f9c0a015e",
+      "Id": "e07bc12f9322456b98134e40fc0f66f4",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "f47b23932f8843b3bcf48f58f71b938d",
+      "End": "a531e63e675247078adeac6002cbe611",
+      "Id": "fb368dd540fa4d7380553f7716029ac0",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "7917b141006e4046ac1309ae903d93b6",
+      "End": "7473bc4dd15f4668a0e2e8baa6ed905e",
+      "Id": "9805491910d54aedb38afb673d6adbb1",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "7917b141006e4046ac1309ae903d93b6",
+      "End": "49d9fe32d5984f9c9efc4ca7159f012f",
+      "Id": "7f9db866fb0f4cb289d77695ebddc39e",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "2.19",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "6.1",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.19.3.6394",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -19.951572418212891,
+      "EyeY": 27.197536468505859,
+      "EyeZ": 64.265937805175781,
+      "LookX": 14.951572418212891,
+      "LookY": -16.197536468505859,
+      "LookZ": -72.265937805175781,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "dff93f612759469e8ff1583cb204747b",
+        "Name": "Element Classes",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -720.70583180324513,
+        "Y": 114.25566934737185
+      },
+      {
+        "Id": "35e86f317cfd4559a44e6cc50dae2b28",
+        "Name": "All Elements of Class",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -465.012071935205,
+        "Y": 112.11117511899653
+      },
+      {
+        "Id": "5f50b79fe32c4acfab3135ca985b1c34",
+        "Name": "Boolean",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -268.67941513931959,
+        "Y": 483.38020409276544
+      },
+      {
+        "Id": "1b14ed136fa142299bb0787117d1fc10",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 493.40252492729513,
+        "Y": 510.69194529596643
+      },
+      {
+        "Id": "81d30489a0264138b29062f3a93b3db1",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -6.0224948932900588,
+        "Y": -95.112605548465865
+      },
+      {
+        "Id": "7cc87302195a4194af50566d7a350d28",
+        "Name": "Element.Delete",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 467.08660506181718,
+        "Y": 347.55798914815239
+      },
+      {
+        "Id": "8baf8b22eb964dab9be86363c4aa8bb3",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 184.51189686904206,
+        "Y": 497.10667965243613
+      },
+      {
+        "Id": "15c87601561e4783ad4f241fcaeca300",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 122.880317745062,
+        "Y": 325.690879717561
+      }
+    ],
+    "Annotations": [],
+    "X": 27.462294332937063,
+    "Y": -145.25499210309408,
+    "Zoom": 0.87609251023346169
+  }
+}

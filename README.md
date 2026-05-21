@@ -12,13 +12,13 @@
 * **User-Friendly:** ออกแบบมาให้เรียกใช้งานได้ง่ายผ่าน Dynamo Player หรือ Revit UI
 
 ### 📂 Project Structure
-* **`src/revit_tools/`** : เครื่องมือหลักสำหรับใช้งานใน Revit
-* **`src/lib/`** : รวบรวม Python Scripts ที่เป็น Template File และ Dynamo Files (.dyn)
-* **`src/apps/`** : แอปพลิเคชันและสคริปต์แยกส่วน (เช่น เครื่องมือเปลี่ยนชื่อไฟล์)
-* **`src/bim_aec/`** : เครื่องมือและสคริปต์สำหรับจัดการข้อมูล BIM/AEC ทั่วไป
-* **`src/utilities/`** : สคริปต์อรรถประโยชน์ต่างๆ สำหรับช่วยเหลือการทำงาน
-* **`autocad/`** : สคริปต์ Python และ Lisp สำหรับการทำงานและสร้างไฟล์ร่วมกับ AutoCAD
-* **`projects/`** : โปรเจกต์ย่อยและแอปพลิเคชันเฉพาะทาง (เช่น NwdHtmlImportApp, Clash Report Tools)
+* **`src/csharp/`** : โปรเจกต์และเครื่องมือที่พัฒนาด้วย C# (เช่น NwdHtmlImportApp, MTC_1ClickPlot)
+* **`src/python/apps/`** : แอปพลิเคชันและสคริปต์แยกส่วน (เช่น เครื่องมือเปลี่ยนชื่อไฟล์, auto_project_info)
+* **`src/python/revit_tools/`** : เครื่องมือหลักสำหรับใช้งานใน Revit
+* **`src/python/lib/`** : รวบรวม Python Scripts ที่เป็น Template File และ Dynamo Files (.dyn)
+* **`src/python/bim_aec/`** : เครื่องมือและสคริปต์สำหรับจัดการข้อมูล BIM/AEC ทั่วไป
+* **`src/python/utilities/`** : สคริปต์อรรถประโยชน์ต่างๆ สำหรับช่วยเหลือการทำงาน
+* **`src/python/autocad/`** : สคริปต์ Python และ Lisp สำหรับการทำงานและสร้างไฟล์ร่วมกับ AutoCAD
 
 ### 🔧 Current Revit Tools
 * **Duct Classification** (`src/revit_tools/DuctClassification`) ระบุชนิดของวัสดุลงสู่ Parameter โดยอัตโนมัติ

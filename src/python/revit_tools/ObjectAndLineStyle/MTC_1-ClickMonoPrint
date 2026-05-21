@@ -1,0 +1,258 @@
+# -*- coding: utf-8 -*-
+"""
+Script: MTC Change Object & Line Style Color 1clickplot (Lean Version - Fixed for IronPython 2)
+"""
+import clr
+import sys
+import System
+import re
+import os
+import time
+
+# Load Revit API
+clr.AddReference('RevitServices')
+from RevitServices.Persistence import DocumentManager
+doc = DocumentManager.Instance.CurrentDBDocument
+
+clr.AddReference('RevitAPI')
+from Autodesk.Revit.DB import Color as RevitColor, Transaction, FilteredElementCollector, ViewSheetSet, PrintSetting
+
+# Load WPF & Windows UI components
+clr.AddReference("PresentationFramework")
+clr.AddReference("PresentationCore")
+clr.AddReference("System.Xml")
+clr.AddReference("System.Printing")
+clr.AddReference("System.Windows.Forms")
+clr.AddReference("System.Drawing") # <--- จุดที่เพิ่มกลับเข้ามาแก้ไข Error
+
+from System.Windows.Markup import XamlReader
+from System.IO import StringReader
+from System.Xml import XmlReader
+from System.Windows.Controls import CheckBox
+from System.Drawing.Printing import PrinterSettings
+from System.Printing import LocalPrintServer
+from System.Windows.Forms import FolderBrowserDialog, DialogResult
+
+# ==========================================
+# 1. Config & Initial Setup
+# ==========================================
+is_active = IN[0] if isinstance(IN[0], bool) else True
+default_exclusions = ["Revision Clouds", "Revision Cloud Tags"]
+black_color = RevitColor(0, 0, 0)
+target_printer_name = "PDF24"
+
+def natural_sort_key(text):
+    return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', text)]
+
+# ==========================================
+# 2. Data Preparation (List Comprehension)
+# ==========================================
+printers_list = sorted([p for p in PrinterSettings.InstalledPrinters], key=natural_sort_key)
+
+ps_elems = FilteredElementCollector(doc).OfClass(PrintSetting).ToElements()
+print_settings_list = sorted([ps.Name for ps in ps_elems if ps.Name], key=natural_sort_key)
+
+vs_elems = FilteredElementCollector(doc).OfClass(ViewSheetSet).ToElements()
+view_sets_list = sorted([vs.Name for vs in vs_elems if vs.Name and not vs.Name.startswith("<")], key=natural_sort_key)
+
+item_data_map = {}
+for cat in doc.Settings.Categories:
+    try:
+        if ".dwg" in cat.Name.lower(): continue
+        item_data_map[cat.Name] = cat
+        for subcat in cat.SubCategories:
+            if ".dwg" not in subcat.Name.lower():
+                item_data_map["{}  >  {}".format(cat.Name, subcat.Name)] = subcat
+    except AttributeError:
+        pass 
+
+# ==========================================
+# 3. UI XAML Definition & Class
+# ==========================================
+XAML_UI = """
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Itti Drawing Plot Manager" Width="500" Height="800" Background="#F5F5F5" Topmost="True" WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="20">
+        <Label Content="1. เลือกรายการที่ต้องการ Exclude:" FontWeight="Bold"/>
+        <TextBox Name="txtSearch" Height="25" Margin="0,5,0,5"/>
+        <ListBox Name="lbCategories" Height="200"/>
+        
+        <Label Content="2. ตั้งค่าการ Plot:" FontWeight="Bold" Margin="0,15,0,0"/>
+        <TextBlock Text="เลือก Printer:" Margin="5,5,0,0"/>
+        <ComboBox Name="cbPrinter" Margin="0,2,0,10"/>
+        <TextBlock Text="เลือก Print Setting:" Margin="5,5,0,0"/>
+        <ComboBox Name="cbPrintSetting" Margin="0,2,0,10"/>
+        <TextBlock Text="เลือก View / Sheet Set:" Margin="5,5,0,0"/>
+        <ComboBox Name="cbViewSet" Margin="0,2,0,10"/>
+        
+        <TextBlock Text="รูปแบบการเซฟไฟล์:" FontWeight="Bold" Margin="5,0,0,5"/>
+        <RadioButton Name="rbCombine" Content="Combine views/sheets into a single file" IsChecked="True" Margin="5,0,0,5"/>
+        <RadioButton Name="rbSeparate" Content="Create separate files" Margin="5,0,0,10"/>
+        
+        <TextBlock Text="โฟลเดอร์สำหรับเซฟไฟล์ (Output Path):" Margin="5,0,0,2"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBox Name="txtPath" Width="350" Height="25" Margin="5,0,5,0" Text="C:\\Temp"/>
+            <Button Name="btnBrowse" Content="Browse..." Width="80" Height="25"/>
+        </StackPanel>
+        
+        <CheckBox Name="chkDoPrint" Content="สั่ง Plot ทันที (พร้อมระบบเช็คคิวอัจฉริยะ)" IsChecked="True" Margin="0,0,0,10"/>
+        <Button Name="btnRun" Content="RUN PROCESS" Height="50" Background="#212121" Foreground="#FFFFFF" FontWeight="Bold"/>
+    </StackPanel>
+</Window>
+"""
+
+class FullProcessSelector(object):
+    def __init__(self, item_map, p_list, v_list, printer_list):
+        self.item_map = item_map
+        self.sorted_names = sorted(self.item_map.keys(), key=natural_sort_key)
+        self.checkbox_map = {}
+        self.excluded_list = []
+        
+        # Load XAML
+        self.window = XamlReader.Load(XmlReader.Create(StringReader(XAML_UI)))
+        
+        # Bind Controls
+        self.txtSearch = self.window.FindName("txtSearch")
+        self.lbCategories = self.window.FindName("lbCategories")
+        self.cbPrinter = self.window.FindName("cbPrinter")
+        self.cbPrintSetting = self.window.FindName("cbPrintSetting")
+        self.cbViewSet = self.window.FindName("cbViewSet")
+        self.rbCombine = self.window.FindName("rbCombine")
+        self.txtPath = self.window.FindName("txtPath")
+        self.btnBrowse = self.window.FindName("btnBrowse")
+        self.chkDoPrint = self.window.FindName("chkDoPrint")
+        self.btnRun = self.window.FindName("btnRun")
+        
+        # Set Data to Controls
+        self.cbPrinter.ItemsSource = printer_list
+        if target_printer_name in printer_list: self.cbPrinter.SelectedItem = target_printer_name
+        elif printer_list: self.cbPrinter.SelectedIndex = 0
+        
+        self.cbPrintSetting.ItemsSource = p_list
+        if p_list: self.cbPrintSetting.SelectedIndex = 0
+        
+        self.cbViewSet.ItemsSource = v_list
+        if v_list: self.cbViewSet.SelectedIndex = 0
+        
+        self.refresh_list("")
+        
+        # Events
+        self.txtSearch.TextChanged += self.on_search_changed
+        self.btnBrowse.Click += self.on_browse
+        self.btnRun.Click += self.on_submit
+        
+    def ShowDialog(self): return self.window.ShowDialog()
+        
+    def on_browse(self, sender, e):
+        dialog = FolderBrowserDialog()
+        dialog.Description = u"เลือกโฟลเดอร์สำหรับบันทึกไฟล์ PDF"
+        if dialog.ShowDialog() == DialogResult.OK: self.txtPath.Text = dialog.SelectedPath
+
+    def refresh_list(self, txt):
+        self.lbCategories.Items.Clear()
+        search = txt.lower()
+        for name in self.sorted_names:
+            if search in name.lower():
+                if name not in self.checkbox_map:
+                    cb = CheckBox()
+                    cb.Content = name
+                    if any(d_ex == name or d_ex in name.split("  >  ") for d_ex in default_exclusions):
+                        cb.IsChecked = True
+                    self.checkbox_map[name] = cb
+                self.lbCategories.Items.Add(self.checkbox_map[name])
+
+    def on_search_changed(self, sender, e): self.refresh_list(self.txtSearch.Text)
+
+    def on_submit(self, sender, e):
+        self.excluded_list = [self.item_map[name] for name, cb in self.checkbox_map.items() if cb.IsChecked]
+        self.window.DialogResult = True
+        self.window.Close()
+
+# ==========================================
+# 4. Main Process Logic
+# ==========================================
+OUT_MSG = u"UI ถูกยกเลิก"
+
+if is_active:
+    try:
+        form = FullProcessSelector(item_data_map, print_settings_list, view_sets_list, printers_list)
+        if form.ShowDialog():
+            
+            # --- Change Color ---
+            original_colors = {}
+            t_black = Transaction(doc, "MTC: Temp Black")
+            t_black.Start()
+            for name, cat in item_data_map.items():
+                if cat not in form.excluded_list:
+                    try:
+                        curr = cat.LineColor
+                        if curr.Red != 0 or curr.Green != 0 or curr.Blue != 0:
+                            original_colors[name] = curr
+                            cat.LineColor = black_color
+                    except AttributeError: pass
+            t_black.Commit()
+            
+            # --- Print Process ---
+            if form.chkDoPrint.IsChecked:
+                try:
+                    pm = doc.PrintManager
+                    selected_printer = form.cbPrinter.SelectedItem
+                    
+                    t_print = Transaction(doc, "MTC: Setup Print")
+                    t_print.Start()
+                    
+                    pm.SelectNewPrintDriver(selected_printer)
+                    pm.PrintRange = pm.PrintRange.Select
+                    pm.PrintToFile = True 
+                    out_dir = form.txtPath.Text
+                    if not os.path.exists(out_dir): os.makedirs(out_dir)
+
+                    pm.CombinedFile = form.rbCombine.IsChecked
+                    filename = "Combined_Print.pdf" if pm.CombinedFile else "Sheet.pdf"
+                    pm.PrintToFileName = os.path.join(out_dir, filename)
+                    
+                    selected_ps = next((ps for ps in ps_elems if ps.Name == form.cbPrintSetting.SelectedItem), None)
+                    if selected_ps: pm.PrintSetup.CurrentPrintSetting = selected_ps
+                    
+                    selected_vs = next((vs for vs in vs_elems if vs.Name == form.cbViewSet.SelectedItem), None)
+                    if selected_vs: pm.ViewSheetSetting.CurrentViewSheetSet = selected_vs
+                            
+                    t_print.Commit()
+                    pm.SubmitPrint()
+                    
+                    # --- Smart Queue Polling ---
+                    try:
+                        print_server = LocalPrintServer()
+                        print_queue = print_server.GetPrintQueue(selected_printer)
+                        time.sleep(1)
+                        timeout_limit = 120 
+                        start_time = time.time()
+                        
+                        while True:
+                            print_queue.Refresh()
+                            if print_queue.NumberOfJobs == 0:
+                                OUT_MSG = u"✅ พิมพ์เสร็จสมบูรณ์! ทำการคืนค่าสี..."
+                                break
+                            if (time.time() - start_time) > timeout_limit:
+                                OUT_MSG = u"⚠️ ระบบรอคิวนานเกิน 2 นาที (Timeout) ทำการคืนค่าสี..."
+                                break
+                            time.sleep(1)
+                            
+                    except Exception:
+                        time.sleep(5) 
+                        OUT_MSG = u"✅ ส่งคำสั่ง Plot สำเร็จ (เช็คคิวไม่ได้ ใช้ Fallback 5s)"
+                        
+                except Exception as pe: OUT_MSG = u"❌ Plot Error: " + str(pe)
+
+            # --- Restore Color ---
+            t_restore = Transaction(doc, "MTC: Restore Color")
+            t_restore.Start()
+            for name, color in original_colors.items():
+                try: item_data_map[name].LineColor = color
+                except Exception: pass
+            t_restore.Commit()
+            
+    except Exception as e:
+        OUT_MSG = u"❌ Error: " + str(e)
+
+OUT = OUT_MSG
