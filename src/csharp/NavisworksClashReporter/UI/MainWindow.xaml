@@ -1,0 +1,88 @@
+<Window x:Class="NavisworksClashReporter.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Navisworks Clash to Excel" Height="550" Width="600"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Mode Selection -->
+        <GroupBox Header="โหมดการทำงาน (Mode Selection)" Grid.Row="0" Margin="0,0,0,15" Padding="10">
+            <StackPanel>
+                <RadioButton x:Name="RbModeApi" Content="ดึงข้อมูลจากโมเดลปัจจุบันผ่าน Navisworks API (เร็วที่สุด)" IsChecked="True" Checked="RbMode_Checked" Margin="0,0,0,5" FontWeight="Bold"/>
+                <RadioButton x:Name="RbModeXml" Content="นำเข้าจากไฟล์ XML และ โฟลเดอร์รูป HTML (สำหรับโปรเจกต์อื่น/ออฟไลน์)" Checked="RbMode_Checked"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Excel Section (Always Visible) -->
+        <GroupBox Header="1. ตั้งค่าไฟล์ Excel" Grid.Row="1" Margin="0,0,0,15" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="ไฟล์เป้าหมาย:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBox x:Name="TxtExcelPath" Grid.Row="0" Grid.Column="0" Margin="80,0,10,5" IsReadOnly="True" Foreground="Gray" Text="ยังไม่ได้เลือกไฟล์..."/>
+                <Button Content="Browse Excel" Grid.Row="0" Grid.Column="1" Width="100" Margin="0,0,0,5" Click="BtnBrowseExcel_Click"/>
+
+                <TextBlock Text="Sheet เป้าหมาย:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
+                <ComboBox x:Name="CmbSheets" Grid.Row="1" Grid.Column="0" Margin="80,0,10,0"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- XML/HTML Section (Visible only in Mode 2) -->
+        <GroupBox x:Name="GrpXmlHtml" Header="2. ตั้งค่าไฟล์นำเข้า (โหมด XML/HTML เท่านั้น)" Grid.Row="2" Margin="0,0,0,15" Padding="10" Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- XML -->
+                <TextBlock Text="ไฟล์ XML:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBox x:Name="TxtXmlPath" Grid.Row="0" Grid.Column="0" Margin="80,0,10,5" IsReadOnly="True" Foreground="Gray" Text="ยังไม่ได้เลือกไฟล์..."/>
+                <Button Content="Browse XML" Grid.Row="0" Grid.Column="1" Width="100" Margin="0,0,0,5" Click="BtnBrowseXml_Click"/>
+
+                <!-- HTML -->
+                <TextBlock Text="โฟลเดอร์ HTML:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtHtmlFolder" Grid.Row="1" Grid.Column="0" Margin="80,0,10,0" IsReadOnly="True" Foreground="Gray" Text="ยังไม่ได้เลือกโฟลเดอร์..."/>
+                <Button Content="Browse Folder" Grid.Row="1" Grid.Column="1" Width="100" Click="BtnBrowseHtml_Click"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Building Selection -->
+        <GroupBox Header="3. เลือกระบุอาคาร (Building)" Grid.Row="3" Margin="0,0,0,15" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="CmbBuildings" Grid.Column="0" Margin="0,0,10,0"/>
+                <Button Content="โหลดข้อมูลตึก" Grid.Column="1" Width="100" Click="BtnRefreshBuildings_Click"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Status -->
+        <TextBlock x:Name="TxtStatus" Grid.Row="4" Text="รอคำสั่ง..." Foreground="DarkBlue" VerticalAlignment="Bottom" Margin="0,0,0,10" FontWeight="Bold"/>
+
+        <!-- Action Button -->
+        <Button x:Name="BtnRun" Grid.Row="5" Content="เริ่มอัปเดตข้อมูลลง Excel" Height="40" Background="#28a745" Foreground="White" FontSize="16" FontWeight="Bold" Click="BtnRun_Click"/>
+    </Grid>
+</Window>

@@ -1,0 +1,16 @@
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.csproj.AssemblyReference.cache
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\UI\MainWindow.baml
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\UI\MainWindow.g.cs
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter_MarkupCompile.cache
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.g.resources
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.GeneratedMSBuildEditorConfig.editorconfig
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.AssemblyInfoInputs.cache
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.AssemblyInfo.cs
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.csproj.CoreCompileInputs.cache
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.sourcelink.json
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\bin\Release\net48\NavisworksClashReporter.dll
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\bin\Release\net48\NavisworksClashReporter.pdb
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\bin\Release\net48\HtmlAgilityPack.dll
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\Naviswor.FD06D867.Up2Date
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.dll
+D:\itti\mtc\ICB_Coding_Workspace\src\csharp\plugins\NavisworksClashReporter\obj\Release\net48\NavisworksClashReporter.pdb

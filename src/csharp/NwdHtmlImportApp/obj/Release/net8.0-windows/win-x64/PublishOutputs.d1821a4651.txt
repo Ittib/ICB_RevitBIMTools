@@ -1,2 +1,0 @@
-D:\itti\mtc\python\projects\NwdHtmlImportApp\bin\Release\net8.0-windows\win-x64\publish\NwdHtmlImportApp.pdb
-D:\itti\mtc\python\projects\NwdHtmlImportApp\bin\Release\net8.0-windows\win-x64\publish\NwdHtmlImportApp.exe

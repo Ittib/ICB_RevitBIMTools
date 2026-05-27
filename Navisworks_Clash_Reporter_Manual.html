@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือและสรุปการทำงาน Navisworks Clash Reporter</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #e2e8f0;
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            color: #cbd5e1;
+            margin-top: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-color: #475569;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            background-color: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.5);
+        }
+
+        .badge-success { background-color: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.5); }
+        .badge-warning { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border-color: rgba(245, 158, 11, 0.5); }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-size: 1.5rem;
+            line-height: 1;
+            top: -2px;
+        }
+
+        strong {
+            color: #e2e8f0;
+        }
+
+        .code-block {
+            background-color: #020617;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            color: #34d399;
+            margin: 1rem 0;
+            border: 1px solid #1e293b;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .flex-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>คู่มือการใช้งาน & สรุป Logic</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem;">ปลั๊กอิน Navisworks Clash Reporter สู่ Excel</p>
+        </header>
+
+        <section>
+            <h2>1. สรุป Logic การทำงานของโปรแกรม (Core Logic)</h2>
+            
+            <div class="card">
+                <h3><span class="badge">1</span> การดึงชื่อไปกรอก (View Extraction)</h3>
+                <ul>
+                    <li>โปรแกรมจะสแกนหา <strong>Saved Viewpoints</strong> ทั้งหมด</li>
+                    <li><strong>ข้าม (Ignore):</strong> View ที่ถูกบันทึกไว้ลอยๆ ที่หน้า Root (ไม่ได้อยู่ในโฟลเดอร์ใดๆ) จะถูกข้ามทั้งหมด</li>
+                    <li>ชื่อ View จะถูกทำความสะอาดช่องว่างและตัวอักษรพิเศษที่ผิดปกติ เพื่อให้การค้นหาใน Excel แม่นยำ</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge badge-success">2</span> การดึงรูปภาพไปวาง (Image Processing)</h3>
+                <ul>
+                    <li><strong>โหมด 1 (API):</strong> โปรแกรมจะหมุนมุมกล้องไปยัง View นั้นๆ โดยอัตโนมัติ สั่งให้ Navisworks บันทึกภาพหน้าจอความละเอียดสูง (400x300) ลงในโฟลเดอร์ชั่วคราว (Temp) เพื่อนำมาใส่ Excel จากนั้นจะลบโฟลเดอร์ทิ้ง</li>
+                    <li><strong>โหมด 2 (XML/HTML):</strong> โปรแกรมจะเข้าไปอ่านโค้ดในไฟล์ HTML ที่คุณ Export มา เพื่อหาพาร์ทรูปภาพ (<img>) โดยจับคู่ชื่อให้ตรงกับข้อมูลใน XML อย่างแม่นยำ (รองรับภาษาไทย)</li>
+                    <li>เมื่อนำรูปมาใส่ใน Excel โปรแกรมจะยืดขยายขนาดแถว (Row Height) ให้พอดีกับรูปภาพเป๊ะๆ</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge badge-warning">3</span> การจัดหมวดหมู่โฟลเดอร์ (Visual / Clash / ETC)</h3>
+                <ul>
+                    <li>พิจารณาจาก <strong>ตัวอักษรตัวแรก</strong> ของชื่อ View เท่านั้น</li>
+                    <li><div class="code-block">C... = "CLASH CHECK"<br>V... = "VISUAL CHECK"<br>ตัวอื่นๆ = "ETC"</div></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge">4</span> การตรวจสอบวันที่ (Date Extraction)</h3>
+                <ul>
+                    <li>โปรแกรมจะไล่เช็ค <strong>ชื่อโฟลเดอร์แม่</strong> จากจุดที่ View อยู่ ไล่ขึ้นไปจนถึง Root</li>
+                    <li>มองหาชื่อโฟลเดอร์ที่เป็น <strong>ตัวเลข 8 หลักรวด</strong> (เช่น 20230526)</li>
+                    <li>เมื่อเจอ จะแปลง Format เป็น <strong style="color:#60a5fa">DD/MM/YYYY</strong> ลงในรายงาน</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge badge-success">5</span> การตรวจสอบ Folder "RESOLVED"</h3>
+                <ul>
+                    <li>เช็คชื่อโฟลเดอร์แม่ทุกลำดับชั้น (ตั้งแต่ Root ลงมา)</li>
+                    <li>หากมีโฟลเดอร์ใดก็ตามที่ชื่อเขียนว่า <strong>RESOLVED</strong> (ตัวเล็กหรือใหญ่ก็ได้)</li>
+                    <li>รายการ View ภายใต้โฟลเดอร์นั้นทั้งหมด จะถูกทำเครื่องหมายเป็น "แก้ไขแล้ว" (IsResolved = true) ทันที</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge badge-warning">6</span> การอัปเดตสถานะ (Status Update)</h3>
+                <ul>
+                    <li>เทียบรายการใหม่ กับรายชื่อที่มีอยู่แล้วในคอลัมน์ C ของ Excel</li>
+                    <li>ถ้าเป็นรายการใหม่ทั้งหมด จะนำมาต่อท้ายให้ (Append)</li>
+                    <li><strong>ข้ามสถานะ "Pending":</strong> ถ้ารายการเดิมใน Excel มีสถานะปัจจุบัน (คอลัมน์ H) เป็นคำว่า <strong style="color: #60a5fa">"Pending"</strong> โปรแกรมจะ <strong>ไม่เขียนทับสถานะ</strong> และปล่อยไว้ตามเดิมเพื่อให้คุณไปตรวจสอบเอง</li>
+                    <li><strong>ตรรกะการประเมินสถานะ:</strong>
+                        <ol style="color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 0;">
+                            <li>หากอยู่ในโฟลเดอร์ RESOLVED สถานะ = <strong style="color: #34d399">"RESOLVED"</strong></li>
+                            <li>หากไม่อยู่ใน RESOLVED ให้เช็ควันที่:
+                                <ul>
+                                    <li>ถ้าวันที่ (Date) = วันที่ล่าสุด (Max Date) ของรอบนั้น -> <strong style="color: #ef4444">"NEW"</strong></li>
+                                    <li>ถ้าเป็นวันที่เก่า หรือไม่มีวันที่ -> <strong style="color: #fbbf24">"ACTIVE"</strong></li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge badge-success">7</span> การเลือกระบุอาคาร (Building Selector)</h3>
+                <ul>
+                    <li>โปรแกรมจะดึงชื่อ <strong>โฟลเดอร์ชั้นนอกสุด (Root Folder)</strong> มาแสดงเป็นรายชื่ออาคารในหน้า UI ให้คุณเลือกก่อนรัน</li>
+                    <li>เมื่อคุณเลือกอาคารใดอาคารหนึ่ง โปรแกรมจะเจาะลึกเข้าไปอ่านข้อมูลและถ่ายรูป <strong>เฉพาะ View ที่อยู่ภายใต้อาคารนั้นเท่านั้น</strong> โดยข้ามข้อมูลของตึกอื่นๆ ออกไปทั้งหมด</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>2. ตัวอย่างโครงสร้างโฟลเดอร์และผลลัพธ์ (Folder Structure Examples)</h2>
+            <div class="card" style="background-color: #0f172a; border-color: #334155;">
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">สมมติว่าผู้ใช้กำหนดให้รันโปรแกรมโดย <strong>เลือก "Building A"</strong> จาก Dropdown เมนู นี่คือผลลัพธ์การทำงานของระบบ:</p>
+                
+                <div style="font-family: monospace; font-size: 1.05rem; line-height: 1.8;">
+                    <div style="color: #cbd5e1;">📸 <span style="color: #94a3b8; text-decoration: line-through;">V_Lobby_Ceiling</span> <span style="color: #ef4444; font-size: 0.9rem;">(ถูกข้าม ❌ - เพราะเป็น Root-level View ไม่ได้อยู่ในโฟลเดอร์ใดๆ)</span></div>
+                    <div style="color: #cbd5e1;">📸 <span style="color: #94a3b8; text-decoration: line-through;">C_Exterior_Wall</span> <span style="color: #ef4444; font-size: 0.9rem;">(ถูกข้าม ❌ - เพราะเป็น Root-level View)</span></div>
+                    <div style="color: #cbd5e1;">📸 <span style="color: #94a3b8; text-decoration: line-through;">X_Unknown_View</span> <span style="color: #ef4444; font-size: 0.9rem;">(ถูกข้าม ❌ - เพราะเป็น Root-level View)</span></div>
+                    
+                    <div style="color: #e2e8f0; margin-top: 1.5rem; font-weight: bold; border-left: 3px solid #34d399; padding-left: 0.5rem;">📁 Building A <span style="color: #34d399; font-size: 0.9rem; font-weight: normal;">(ถูกดึงข้อมูล ✅ - เพราะตรงกับที่เลือก)</span></div>
+                    <div style="margin-left: 2.5rem;">
+                        <div style="color: #cbd5e1;">📸 C_STR_AR_01 <span style="color: #60a5fa; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: CLASH CHECK | สถานะ: ACTIVE (ไม่มีวันที่)</span></div>
+                        <div style="color: #cbd5e1;">📸 V_AR_MEP_05 <span style="color: #60a5fa; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: VISUAL CHECK | สถานะ: ACTIVE (ไม่มีวันที่)</span></div>
+                        
+                        <div style="color: #e2e8f0; margin-top: 0.75rem;">📁 Review_Pending <span style="color: #94a3b8; font-size: 0.8rem;">(โฟลเดอร์ทั่วไปที่ไม่ใช่วันที่ และไม่ใช่ Resolved)</span></div>
+                        <div style="margin-left: 2rem; border-left: 1px dashed #334155; padding-left: 1rem;">
+                            <div style="color: #cbd5e1;">📸 C_Architectural_01 <span style="color: #60a5fa; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: CLASH CHECK | สถานะ: ACTIVE (ไม่มีวันที่)</span></div>
+                        </div>
+
+                        <div style="color: #e2e8f0; margin-top: 0.75rem;">📁 20230526 <span style="color: #94a3b8; font-size: 0.8rem;">(โฟลเดอร์วันที่ 8 หลัก)</span></div>
+                        <div style="margin-left: 2rem; border-left: 1px dashed #334155; padding-left: 1rem;">
+                            <div style="color: #cbd5e1;">📸 V_Level1_Column <span style="color: #60a5fa; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: VISUAL CHECK | วันที่: 26/05/2023</span></div>
+                            <div style="color: #cbd5e1;">📸 C_Beam_Clash_01 <span style="color: #60a5fa; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: CLASH CHECK | วันที่: 26/05/2023</span></div>
+                            <div style="color: #cbd5e1;">📸 X_General_Issue <span style="color: #60a5fa; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: ETC | วันที่: 26/05/2023</span></div>
+                            
+                            <div style="color: #fbbf24; margin-top: 0.75rem; font-weight: bold;">📁 RESOLVED <span style="color: #94a3b8; font-size: 0.8rem; font-weight: normal;">(บังคับให้ข้างในเป็น Resolved ทั้งหมด)</span></div>
+                            <div style="margin-left: 2rem; border-left: 1px dashed #334155; padding-left: 1rem;">
+                                <div style="color: #cbd5e1;">📸 C_MEP_AR_02 <span style="color: #34d399; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: CLASH CHECK | วันที่: 26/05/2023 | สถานะ: RESOLVED</span></div>
+                                <div style="color: #cbd5e1;">📸 V_Ceiling_Issue <span style="color: #34d399; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: VISUAL CHECK | วันที่: 26/05/2023 | สถานะ: RESOLVED</span></div>
+                                <div style="color: #cbd5e1;">📸 C_Pipe_Duct_05 <span style="color: #34d399; font-size: 0.9rem;">-> ดึงสำเร็จ ✅ | หมวด: CLASH CHECK | วันที่: 26/05/2023 | สถานะ: RESOLVED</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="color: #94a3b8; margin-top: 1.5rem; font-weight: bold; border-left: 3px solid #ef4444; padding-left: 0.5rem;">📁 Building B <span style="color: #ef4444; font-size: 0.9rem; font-weight: normal;">(ถูกข้าม ❌ - เพราะไม่ได้ถูกเลือก)</span></div>
+                    <div style="margin-left: 2.5rem; opacity: 0.5;">
+                        <div style="color: #94a3b8;">📁 20230601</div>
+                        <div style="margin-left: 2rem;">
+                            <div style="color: #94a3b8; text-decoration: line-through;">📸 C_STR_MEP_01</div>
+                            <div style="color: #94a3b8; text-decoration: line-through;">📸 V_Level2_Wall</div>
+                            <div style="color: #94a3b8; margin-top: 0.5rem;">📁 RESOLVED</div>
+                            <div style="margin-left: 2rem;">
+                                <div style="color: #94a3b8; text-decoration: line-through;">📸 C_Resolved_Issue_01</div>
+                            </div>
+                        </div>
+                        <div style="color: #94a3b8; text-decoration: line-through; margin-top: 0.5rem;">📸 V_Outside_01</div>
+                        <div style="color: #94a3b8; text-decoration: line-through;">📸 C_Root_Clash_02</div>
+                    </div>
+
+                    <div style="color: #94a3b8; margin-top: 1.5rem; font-weight: bold; border-left: 3px solid #ef4444; padding-left: 0.5rem;">📁 Building C <span style="color: #ef4444; font-size: 0.9rem; font-weight: normal;">(ถูกข้าม ❌ - เพราะไม่ได้ถูกเลือก)</span></div>
+                    <div style="margin-left: 2.5rem; opacity: 0.5;">
+                        <div style="color: #94a3b8; text-decoration: line-through;">📸 C_Issue_01</div>
+                        <div style="color: #94a3b8; margin-top: 0.5rem;">📁 20230615</div>
+                        <div style="margin-left: 2rem;">
+                            <div style="color: #94a3b8; text-decoration: line-through;">📸 V_Issue_02</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>3. คู่มือการใช้งานสำหรับ User (User Manual)</h2>
+
+            <div class="card" style="border-color: rgba(37, 99, 235, 0.5);">
+                <div class="flex-row">
+                    <div style="font-size: 2rem; margin-right: 1rem;">🚀</div>
+                    <h3 style="margin: 0; color: #60a5fa;">โหมด 1: แบบดึงข้อมูลโดยตรง (API Mode)</h3>
+                </div>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">โหมดนี้สะดวกที่สุด เพราะไม่ต้อง Export ไฟล์ใดๆ ออกมาก่อน ให้ปลั๊กอินจัดการให้หมด</p>
+                
+                <div class="flex-row"><div class="step-number">1</div><span>เปิดโมเดลงานในโปรแกรม <strong>Navisworks</strong></span></div>
+                <div class="flex-row"><div class="step-number">2</div><span>เปิดโปรแกรม ปลั๊กอิน MTC Clash Reporter (จากแท็บ Ribbon)</span></div>
+                <div class="flex-row"><div class="step-number">3</div><span>เลือก <strong>ไฟล์ Excel ต้นฉบับ</strong> และ <strong>Sheet</strong> ที่ต้องการนำข้อมูลไปใส่</span></div>
+                <div class="flex-row"><div class="step-number">4</div><span>ที่หัวข้อ 3 ให้เลือก <strong>ชื่ออาคาร (Building)</strong> ที่ต้องการดึงข้อมูล</span></div>
+                <div class="flex-row"><div class="step-number">5</div><span>กดปุ่ม <strong>เริ่มอัปเดตข้อมูลลง Excel</strong></span></div>
+                
+                <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1.5rem;">
+                    <strong style="color: #fbbf24;">หมายเหตุระหว่างการรัน:</strong> หน้าจอโมเดลจะมีการกะพริบและหมุนกล้องไปมาอัตโนมัติ (เพื่อถ่ายรูป) กรุณารอสักครู่จนกว่าจะมีข้อความแจ้งเตือนว่าเสร็จสมบูรณ์
+                </div>
+            </div>
+
+            <div class="card" style="border-color: rgba(16, 185, 129, 0.5);">
+                <div class="flex-row">
+                    <div style="font-size: 2rem; margin-right: 1rem;">📁</div>
+                    <h3 style="margin: 0; color: #34d399;">โหมด 2: แบบใช้ไฟล์ส่งออก (XML/HTML Mode)</h3>
+                </div>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">โหมดนี้เหมาะสำหรับกรณีที่คุณมีการเซฟ Report จาก Navisworks เก็บไว้ล่วงหน้าแล้ว หรือต้องการทำงานออฟไลน์</p>
+                
+                <div class="flex-row"><div class="step-number">1</div><span>ทำการสั่ง Export Clash Report ออกมาจาก Navisworks ให้อยู่ในรูปแบบ <strong>XML</strong></span></div>
+                <div class="flex-row"><div class="step-number">2</div><span>ทำการสั่ง Export Clash Report ออกมาจาก Navisworks ให้อยู่ในรูปแบบ <strong>HTML (Tabular)</strong></span></div>
+                <div class="flex-row"><div class="step-number">3</div><span>เปิดโปรแกรม ปลั๊กอิน MTC Clash Reporter และเลือกโหมด <strong>"ใช้ไฟล์ XML/HTML"</strong></span></div>
+                <div class="flex-row"><div class="step-number">4</div><span>กดปุ่ม <strong>Browse</strong> เพื่อเลือก:
+                    <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                        <li>ไฟล์ XML</li>
+                        <li>โฟลเดอร์ที่มีไฟล์ HTML (เลือกโฟลเดอร์ที่เก็บไฟล์ HTML เอาไว้)</li>
+                        <li>ไฟล์ Excel ที่ต้องการอัปเดต</li>
+                    </ul>
+                </span></div>
+                <div class="flex-row"><div class="step-number">5</div><span>กด <strong>โหลดข้อมูลตึก</strong> เพื่อให้โปรแกรมอ่านรายชื่อตึกจากไฟล์ XML แล้วเลือก <strong>อาคาร</strong> ที่ต้องการ</span></div>
+                <div class="flex-row"><div class="step-number">6</div><span>กดปุ่ม <strong>เริ่มอัปเดตข้อมูลลง Excel</strong> และรอโปรแกรมประมวลผลจนเสร็จ</span></div>
+            </div>
+
+        </section>
+
+        <section>
+            <h2>4. การติดตั้งเพื่อแชร์ให้ทีมงาน (Deployment)</h2>
+            
+            <div class="card" style="border-color: #475569;">
+                <h3 style="margin-top: 0; color: #e2e8f0;">ไฟล์ที่จำเป็นต้องใช้</h3>
+                <p style="color: var(--text-muted); margin-bottom: 1rem;">คุณจะต้องก๊อปปี้ไฟล์ 2 ไฟล์นี้ส่งให้ทีมงาน:</p>
+                <ul style="margin-bottom: 1.5rem;">
+                    <li><code>NavisworksClashReporter.dll</code> (ตัวปลั๊กอินหลัก)</li>
+                    <li><code>HtmlAgilityPack.dll</code> (ตัวช่วยอ่านภาษาไทย)</li>
+                </ul>
+
+                <h3 style="color: #e2e8f0;">วิธีติดตั้งลงเครื่อง (ไม่ต้องใช้สิทธิ์ Admin)</h3>
+                <div class="flex-row"><div class="step-number">1</div><span>ให้ทีมงานสร้างโฟลเดอร์ชื่อ <strong>NavisworksClashReporter</strong> ไว้ที่ปลายทาง</span></div>
+                <div class="flex-row"><div class="step-number">2</div><span>นำไฟล์ DLL ทั้ง 2 ไฟล์ไปใส่ไว้ในโฟลเดอร์ที่สร้างขึ้น</span></div>
+                <div class="flex-row"><div class="step-number">3</div><span>นำโฟลเดอร์ไปวางไว้ที่: <div class="code-block" style="margin-top: 0.5rem; margin-bottom: 0.5rem; display: inline-block;">C:\User\Username\%APPDATA%\Roaming\Autodesk Navisworks Manage 2023\Plugins\(หากไม่มี Folder : Plugins ให้สร้างขึ้นมาใหม่)</div></span></div>
+                
+                <div style="background: rgba(37, 99, 235, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1.5rem; border: 1px solid rgba(37, 99, 235, 0.3);">
+                    <strong style="color: #60a5fa;">💡 ทริคสำหรับการเข้าถึงโฟลเดอร์:</strong><br>
+                    <span style="color: var(--text-muted);">พิมพ์ <code>%APPDATA%</code> ในช่องค้นหาที่อยู่ของ File Explorer (ช่อง Address Bar) แล้วกด Enter ระบบจะพาไปที่โฟลเดอร์ AppData\Roaming อัตโนมัติ จากนั้นให้หาโฟลเดอร์ Autodesk และเข้าไปวางปลั๊กอินได้เลยครับ</span>
+                </div>
+            </div>
+        </section>
+        
+        <footer style="text-align: center; margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); color: var(--text-muted);">
+            <p>Developed by Ittichai & Antigravity AI Assistant</p>
+        </footer>
+    </div>
+</body>
+</html>

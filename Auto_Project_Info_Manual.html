@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือและสรุปการทำงาน Auto Project Info</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #e2e8f0;
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            color: #cbd5e1;
+            margin-top: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-color: #475569;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            background-color: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.5);
+        }
+
+        .badge-success { background-color: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.5); }
+        .badge-warning { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border-color: rgba(245, 158, 11, 0.5); }
+        .badge-danger { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border-color: rgba(239, 68, 68, 0.5); }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-size: 1.5rem;
+            line-height: 1;
+            top: -2px;
+        }
+
+        strong {
+            color: #e2e8f0;
+        }
+
+        .code-block {
+            background-color: #020617;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            color: #34d399;
+            margin: 1rem 0;
+            border: 1px solid #1e293b;
+            display: block;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .flex-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>คู่มือการใช้งาน & สรุป Logic</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem;">สคริปต์ Auto Project Info (Revit Python / Dynamo)</p>
+        </header>
+
+        <section>
+            <h2>1. สรุปฟีเจอร์เด่นและการทำงาน (Core Logic)</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">สคริปต์ <code>auto_project_info.py</code> ทำหน้าที่อ่านข้อมูลจากไฟล์ Excel แล้วนำมากรอกลงในช่อง <strong>Project Information</strong> ของ Revit โดยอัตโนมัติ ซึ่งมีจุดเด่นคือ:</p>
+            
+            <div class="card">
+                <h3><span class="badge">1</span> การเชื่อมต่อและอ่านข้อมูล Excel (Excel Interop)</h3>
+                <ul>
+                    <li>โปรแกรมจะเรียกหน้าต่างขึ้นมาให้ผู้ใช้ <strong>เลือกไฟล์ Excel (.xlsx)</strong> ที่เก็บข้อมูลผู้ออกแบบเอาไว้</li>
+                    <li>ทำงานอยู่เบื้องหลัง (Background Process) ทำให้หน้าต่าง Excel ไม่เด้งรบกวนการทำงานของผู้ใช้</li>
+                    <li>เจาะจงอ่านข้อมูลจาก Sheet ที่ชื่อว่า <code>"Eng name"</code> เท่านั้น โดยเริ่มอ่านตั้งแต่ <strong>แถวที่ 4 ไปจนถึงแถวที่ 100</strong></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge badge-warning">2</span> ตรรกะการจับคู่ข้อมูล (Parameter Mapping)</h3>
+                <ul>
+                    <li><strong>ชื่อตำแหน่ง (Parameter Name):</strong> อ่านจากคอลัมน์ A (เช่น "Architect 1")</li>
+                    <li><strong>ชื่อ-นามสกุล (Thai Name):</strong> อ่านจากคอลัมน์ D แล้วนำไปกรอกลงในพารามิเตอร์ชื่อ <code>{ชื่อตำแหน่ง}</code> ใน Revit</li>
+                    <li><strong>เลขที่ใบอนุญาต (License No.):</strong> อ่านจากคอลัมน์ C แล้วนำไปกรอกลงในพารามิเตอร์ชื่อ <code>{ชื่อตำแหน่ง} License No.</code> ใน Revit (เช่น "Architect 1 License No.")</li>
+                    <li><em>หากบรรทัดไหนไม่มีชื่อตำแหน่งในคอลัมน์ A โปรแกรมจะข้ามแถวนั้นไปทันที</em></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3><span class="badge badge-success">3</span> ระบบ Transaction อัตโนมัติ</h3>
+                <ul>
+                    <li>ใช้ <code>TransactionManager</code> เพื่อรวมการกรอกข้อมูลนับร้อยรายการไว้ในคำสั่งเดียว ทำให้กด Undo (Ctrl+Z) ครั้งเดียวเพื่อย้อนกลับได้หากกรอกข้อมูลผิดพลาด</li>
+                    <li>มีระบบป้องกันไฟล์ค้าง (Cleanup) ปิดการทำงานของแอป Excel ที่ทำงานอยู่เบื้องหลังเสมอไม่ว่าจะทำงานสำเร็จหรือเกิดข้อผิดพลาด</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>2. วิธีการใช้งานสำหรับ User (User Workflow)</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">เนื่องจากปัจจุบันยังเป็น Python Script ที่รันผ่าน Dynamo (หรือเครื่องมือรันสคริปต์) การใช้งานจึงมีลำดับดังนี้:</p>
+            
+            <div class="card" style="border-color: rgba(37, 99, 235, 0.5);">
+                <div class="flex-row"><div class="step-number">1</div><span>เปิดโมเดล <strong>Revit</strong> ที่ต้องการกรอกข้อมูล Project Info</span></div>
+                <div class="flex-row"><div class="step-number">2</div><span>รันสคริปต์ <strong>Auto Project Info</strong> ผ่านทาง Dynamo Player (หรือหน้าต่างรันสคริปต์)</span></div>
+                <div class="flex-row"><div class="step-number">3</div><span>หน้าต่าง <strong>"กรุณาเลือกไฟล์ Excel สำหรับข้อมูลผู้ออกแบบ"</strong> จะเด้งขึ้นมา</span></div>
+                <div class="flex-row"><div class="step-number">4</div><span>เลือกไฟล์ Excel ต้นฉบับที่มี Sheet ชื่อ <code>Eng name</code> แล้วกด <strong>Open</strong></span></div>
+                <div class="flex-row"><div class="step-number">5</div><span>รอสคริปต์ทำงานสักครู่ (ทำงานแบบเงียบๆ เบื้องหลัง)</span></div>
+                <div class="flex-row"><div class="step-number">6</div><span>ไปที่ <strong>Manage > Project Information</strong> ใน Revit เพื่อตรวจสอบรายชื่อและเลขใบประกอบวิชาชีพที่ถูกกรอกไว้เรียบร้อยแล้ว</span></div>
+                
+                <div style="background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1.5rem;">
+                    <strong style="color: #34d399;">✅ ข้อแนะนำ:</strong><br>
+                    <span style="color: var(--text-muted);">
+                    เพื่อให้โปรแกรมทำงานได้สมบูรณ์ ใน Project Information ของ Revit ควรมีการสร้าง Shared Parameter หรือ Project Parameter ที่ชื่อตรงกับคอลัมน์ A ไว้ล่วงหน้าแล้ว ทั้งตัวชื่อคน (เช่น Architect 1) และเลขใบอนุญาต (เช่น Architect 1 License No.)
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>3. แผนการอัปเดตในอนาคต (Future Roadmap)</h2>
+            <div class="card" style="border-color: #475569;">
+                <div class="flex-row">
+                    <div style="font-size: 2rem; margin-right: 1rem;">🚀</div>
+                    <h3 style="margin: 0; color: #e2e8f0;">การแปลงร่างเป็น Revit Add-in (.dll)</h3>
+                </div>
+                <p style="color: var(--text-muted); margin-top: 1rem;">ในอนาคต เครื่องมือนี้จะถูกอัปเกรดจาก Python Script ธรรมดาให้กลายเป็นปลั๊กอิน (C# DLL) เต็มรูปแบบ ซึ่งจะส่งผลดีดังนี้:</p>
+                <ul>
+                    <li>ใช้งานง่ายขึ้นเพียงคลิกเดียวจากแถบเมนู Add-ins (ไม่ต้องยุ่งกับ Dynamo อีกต่อไป)</li>
+                    <li>หน้าต่าง UI จะสวยงามและใช้งานง่ายกว่าเดิม</li>
+                    <li>ทำงานเร็วขึ้น และไม่ต้องพึ่งพา Excel Interop แบบเดิม (อาจเปลี่ยนไปใช้ไลบรารีอ่านไฟล์ Excel โดยตรงที่รวดเร็วกว่า)</li>
+                </ul>
+            </div>
+        </section>
+        
+        <footer style="text-align: center; margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); color: var(--text-muted);">
+            <p>Developed by Ittichai & Antigravity AI Assistant</p>
+        </footer>
+    </div>
+</body>
+</html>
