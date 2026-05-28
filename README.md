@@ -23,4 +23,9 @@
 ### 🔧 Current Revit Tools
 * **Duct Classification** (`src/revit_tools/DuctClassification`) ระบุชนิดของวัสดุลงสู่ Parameter โดยอัตโนมัติ
 * **Filter Cleaner** (`src/revit_tools/FilterCleaner`) จัดการลบ Filter หลายๆชิ้นในโปรเจคได้ในทีเดียว
-* **1clickMonoPrint** (`src/revit_tools/ObjectAndLineStyle`) Plot Drawing ให้เป็นสีดำโดยยังคง Object หรือ Line Style ที่เลือกให้เป็นสีเหมือนเดิม
+* **1clickMonoPrint** (`src/revit_tools/outdated/ObjectAndLineStyle`) Plot Drawing ให้เป็นสีดำโดยยังคง Object หรือ Line Style ที่เลือกให้เป็นสีเหมือนเดิม
+* **MTC 1ClickPlot** (`src/csharp/MTC_1ClickPlot`) เครื่องมือสั่งพิมพ์ PDF แบบแยกแผ่นและเปลี่ยนสีอัจฉริยะ (ดู [คู่มือการใช้งาน](src/csharp/MTC_1ClickPlot/bin/Release/MTC_1ClickPlot_Manual.html))
+* **Auto Project Info** (`src/python/apps/auto_project_info`) สคริปต์อัปเดต Project Info แบบอัตโนมัติจากไฟล์ Excel (ดู [คู่มือและตรรกะการทำงาน](src/python/apps/auto_project_info/Auto_Project_Info_Manual.html))
+
+### 🏗️ Navisworks Tools
+* **Navisworks Clash Reporter** (`src/csharp/plugins/NavisworksClashReporter`) ดึงข้อมูล View และรูปภาพจาก Navisworks ลง Excel อัตโนมัติ (ดู [คู่มือการใช้งาน](src/csharp/NavisworksClashReporter/bin/Release/net48/Navisworks_Clash_Reporter_Manual.html))

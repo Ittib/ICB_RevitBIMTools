@@ -3,8 +3,8 @@ import datetime
 from collections import Counter
 
 # 🎯 ตั้งค่าโฟลเดอร์ที่ต้องการสแกน
-TARGET_DIR = r"R:\01_MTC_Library\MTC R24 (Update)\03_ME_Library" 
-OUTPUT_FILE = r"C:\Users\ittichai.b\Downloads\Full_Server_Structure_Report.txt"
+TARGET_DIR = r"R:\05_MTC_Library Development" 
+OUTPUT_FILE = r"C:\Users\ittichai.b\Downloads\DevelopLibrary_Full_Server_Structure_Report.txt"
 
 def generate_tree(startpath):
     tree_output = []

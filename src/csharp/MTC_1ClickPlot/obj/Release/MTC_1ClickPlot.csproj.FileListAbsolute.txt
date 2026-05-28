@@ -1,9 +1,0 @@
-D:\itti\mtc\csharp\MTC_1ClickPlot\obj\Release\MTC_1ClickPlot.csprojResolveAssemblyReference.cache
-D:\itti\mtc\csharp\MTC_1ClickPlot\obj\Release\UI\PrintUI.baml
-D:\itti\mtc\csharp\MTC_1ClickPlot\obj\Release\UI\PrintUI.g.cs
-D:\itti\mtc\csharp\MTC_1ClickPlot\obj\Release\MTC_1ClickPlot_MarkupCompile.cache
-D:\itti\mtc\csharp\MTC_1ClickPlot\obj\Release\MTC_1ClickPlot.g.resources
-D:\itti\mtc\csharp\MTC_1ClickPlot\bin\Release\MTC_1ClickPlot.dll
-D:\itti\mtc\csharp\MTC_1ClickPlot\bin\Release\MTC_1ClickPlot.pdb
-D:\itti\mtc\csharp\MTC_1ClickPlot\obj\Release\MTC_1ClickPlot.dll
-D:\itti\mtc\csharp\MTC_1ClickPlot\obj\Release\MTC_1ClickPlot.pdb

@@ -77,5 +77,8 @@
   <ItemGroup>
     <None Include="MTC_1ClickPlot.addin" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\MTC_1ClickPloticon.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

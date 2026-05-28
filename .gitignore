@@ -23,3 +23,8 @@ ai_workspace/
 
 # Log files
 *.log
+
+# C# / .NET
+[Bb]in/
+[Oo]bj/
+
